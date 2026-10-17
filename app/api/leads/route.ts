@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server.js";
 import { z } from "zod";
 
 export const runtime = "nodejs";
