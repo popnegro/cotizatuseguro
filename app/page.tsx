@@ -37,14 +37,14 @@ export default function Home() {
 
   useEffect(() => {
     if (consent === "accepted" && process.env.NEXT_PUBLIC_GTM_ID && !document.getElementById("gtm-loader")) {
+      const w = window as Window & { dataLayer?: Record<string, unknown>[] };
+      w.dataLayer = w.dataLayer || [];
+      w.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
       const script = document.createElement("script");
       script.id = "gtm-loader";
       script.async = true;
       script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(process.env.NEXT_PUBLIC_GTM_ID)}`;
       document.head.appendChild(script);
-      const w = window as Window & { dataLayer?: Record<string, unknown>[] };
-      w.dataLayer = w.dataLayer || [];
-      w.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
     }
   }, [consent]);
 
@@ -79,9 +79,12 @@ export default function Home() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "No pudimos registrar tu solicitud. Intentá nuevamente.");
       track("generate_lead", { insurance_product: form.product, event_id: data.requestId || "" });
-      setSuccess("Solicitud registrada. Ahora podés continuar por WhatsApp.");
       const number = process.env.NEXT_PUBLIC_WHATSAPP_BUSINESS_NUMBER;
-      if (!number) throw new Error("La solicitud se registró, pero WhatsApp todavía no está configurado. Contactá al administrador del sitio.");
+      if (!number) {
+        setSuccess("Solicitud registrada correctamente. WhatsApp todavía no está configurado; el equipo debe completar ese paso para continuar.");
+        return;
+      }
+      setSuccess("Solicitud registrada. Ahora podés continuar por WhatsApp.");
       const label = products.find((item) => item.id === form.product)?.title || form.product;
       const message = encodeURIComponent(`Hola, quiero solicitar una cotización de seguro para ${label.toLowerCase()}. Mi número de solicitud es ${data.requestId}.`);
       track("whatsapp_click", { insurance_product: form.product });
