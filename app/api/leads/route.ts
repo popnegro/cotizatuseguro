@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server.js";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -10,7 +10,7 @@ const schema = z.object({
   name: z.string().trim().min(2).max(100),
   phone: z.string().trim().min(8).max(30),
   city: z.string().trim().min(2).max(100),
-  product: z.enum(["auto", "moto", "hogar", "comercio"]),
+  product: z.enum(["auto", "moto", "hogar", "comercio", "bicicletas", "vida", "accidentes_personales", "art", "consorcio", "viajes", "caucion_alquiler"]),
   details: z.record(z.string(), z.string().max(200)).optional().default({}),
   attribution: attributionSchema
 });
@@ -62,15 +62,15 @@ export async function POST(request: NextRequest) {
     insurance_product: data.product,
     insurance_request_id: requestId,
     insurance_request_details: JSON.stringify(data.details).slice(0, 900),
-    lead_source: data.attribution.utm_source || "direct",
-    utm_source: data.attribution.utm_source || "",
-    utm_medium: data.attribution.utm_medium || "",
-    utm_campaign: data.attribution.utm_campaign || "",
-    utm_content: data.attribution.utm_content || "",
-    utm_term: data.attribution.utm_term || "",
-    gclid: data.attribution.gclid || "",
-    fbclid: data.attribution.fbclid || ""
+    lead_source: data.attribution.utm_source?.trim() || "direct"
   };
+
+  // HubSpot string properties should be omitted when attribution is absent,
+  // rather than sent as empty strings that can trigger CRM validation errors.
+  for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"] as const) {
+    const value = data.attribution[key]?.trim();
+    if (value) properties[key] = value;
+  }
 
   const endpoint = "https://api.hubapi.com/crm/v3/objects/contacts";
   try {
