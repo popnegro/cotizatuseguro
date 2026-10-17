@@ -5,13 +5,13 @@ import { z } from "zod";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const attributionSchema = z.record(z.string().max(500)).optional().default({});
+const attributionSchema = z.record(z.string(), z.string().max(500)).optional().default({});
 const schema = z.object({
   name: z.string().trim().min(2).max(100),
   phone: z.string().trim().min(8).max(30),
   city: z.string().trim().min(2).max(100),
   product: z.enum(["auto", "moto", "hogar", "comercio"]),
-  details: z.record(z.string().max(200)).optional().default({}),
+  details: z.record(z.string(), z.string().max(200)).optional().default({}),
   attribution: attributionSchema
 });
 
