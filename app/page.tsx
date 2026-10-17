@@ -56,7 +56,27 @@ export default function Home() {
   }, [consent]);
 
   useEffect(() => {
-    if (consent === "accepted" && process.env.NEXT_PUBLIC_GTM_ID && !document.getElementById("gtm-loader")) {
+    if (consent !== "accepted") return;
+
+    // GA4 direct tag: loaded only after analytics consent.
+    const ga4Id = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
+    if (ga4Id && !document.getElementById("ga4-loader")) {
+      const w = window as Window & {
+        dataLayer?: IArguments[] | unknown[];
+        gtag?: (...args: unknown[]) => void;
+      };
+      w.dataLayer = w.dataLayer || [];
+      w.gtag = w.gtag || function (...args: unknown[]) { w.dataLayer?.push(args); };
+      w.gtag("js", new Date());
+      w.gtag("config", ga4Id);
+      const ga4Script = document.createElement("script");
+      ga4Script.id = "ga4-loader";
+      ga4Script.async = true;
+      ga4Script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ga4Id)}`;
+      document.head.appendChild(ga4Script);
+    }
+
+    if (process.env.NEXT_PUBLIC_GTM_ID && !document.getElementById("gtm-loader")) {
       const w = window as Window & { dataLayer?: Record<string, unknown>[] };
       w.dataLayer = w.dataLayer || [];
       w.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
