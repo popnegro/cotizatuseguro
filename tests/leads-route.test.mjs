@@ -78,3 +78,57 @@ test("rejects invalid input before contacting HubSpot", async (t) => {
   assert.equal(response.status, 400);
   assert.equal(fetchMock.mock.callCount(), 0);
 });
+
+test("accepts every HubSpot insurance_product option and omits blank attribution", async (t) => {
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+  });
+
+  const validProducts = [
+    "auto", "moto", "hogar", "comercio", "bicicletas", "vida",
+    "accidentes_personales", "art", "consorcio", "viajes", "caucion_alquiler"
+  ];
+  const capturedPayloads = [];
+  const fetchMock = mock.method(globalThis, "fetch", async (_url, init) => {
+    capturedPayloads.push(JSON.parse(init.body));
+    return new Response(JSON.stringify({ id: "test-contact-id" }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" }
+    });
+  });
+  t.after(() => fetchMock.mock.restore());
+
+  for (const [index, product] of validProducts.entries()) {
+    const request = new NextRequest("https://preview.example.test/api/leads", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": `192.0.2.${20 + index}`
+      },
+      body: JSON.stringify({
+        name: "QA Test",
+        phone: "+54 261 555 0101",
+        city: "Mendoza",
+        product,
+        attribution: { utm_source: "  ", utm_medium: "", gclid: "  " }
+      })
+    });
+    const response = await POST(request);
+    assert.equal(response.status, 201, `product rejected: ${product}`);
+  }
+
+  assert.equal(fetchMock.mock.callCount(), validProducts.length);
+  assert.deepEqual(
+    capturedPayloads.map(({ properties }) => properties.insurance_product),
+    validProducts
+  );
+  for (const { properties } of capturedPayloads) {
+    assert.equal(properties.lead_source, "direct");
+    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"]) {
+      assert.equal(Object.hasOwn(properties, key), false, `unexpected blank attribution property: ${key}`);
+    }
+  }
+});
