@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mock } from "node:test";
-import { NextRequest } from "next/server.js";
+import { NextRequest } from "next/server";
 import { POST } from "../app/api/leads/route.ts";
 
 test("creates a lead using HubSpot properties without calling the live CRM", async (t) => {
