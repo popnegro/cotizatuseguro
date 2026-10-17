@@ -62,7 +62,7 @@ export default function Home() {
     const ga4Id = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
     if (ga4Id && !document.getElementById("ga4-loader")) {
       const w = window as Window & {
-        dataLayer?: IArguments[] | unknown[];
+        dataLayer?: unknown[];
         gtag?: (...args: unknown[]) => void;
       };
       w.dataLayer = w.dataLayer || [];
