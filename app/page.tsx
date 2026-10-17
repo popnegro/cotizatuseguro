@@ -42,7 +42,7 @@ export default function Home() {
     if (consent === "accepted" && process.env.NEXT_PUBLIC_META_PIXEL_ID && !document.getElementById("meta-pixel-loader")) {
       const w = window as Window & { fbq?: (...args: unknown[]) => void };
       if (!w.fbq) {
-        const f = function (...args: unknown[]) { const q = f as typeof f & { queue?: unknown[] }; (q.queue = q.queue || []).push(args); } as Window["fbq"];
+        const f = function (...args: unknown[]) { const q = f as typeof f & { queue?: unknown[] }; (q.queue = q.queue || []).push(args); } as (...args: unknown[]) => void;
         w.fbq = f as unknown as (...args: unknown[]) => void;
       }
       w.fbq("init", process.env.NEXT_PUBLIC_META_PIXEL_ID);
