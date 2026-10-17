@@ -15,7 +15,6 @@ const schema = z.object({
   attribution: attributionSchema
 });
 
-const productLabels = { auto: "Autos", moto: "Motos", hogar: "Hogar", comercio: "Comercios" } as const;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 8;
