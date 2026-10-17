@@ -13,9 +13,12 @@ const products: { id: Product; title: string; desc: string; icon: string }[] = [
 const initialForm: FormState = { name: "", phone: "", city: "Mendoza", product: "auto", make: "", model: "", year: "", homeType: "Casa", coverage: "A definir con asesoramiento", businessType: "", privacyAccepted: false };
 
 function track(event: string, params: Record<string, string> = {}) {
-  if (typeof window === "undefined") return;
-  const w = window as Window & { dataLayer?: Record<string, unknown>[] };
-  w.dataLayer?.push({ event, ...params });
+  if (typeof window === "undefined" || window.localStorage.getItem("analytics-consent") !== "accepted") return;
+  const w = window as Window & { dataLayer?: Record<string, unknown>[]; fbq?: (...args: unknown[]) => void };
+  w.dataLayer = w.dataLayer || [];
+  w.dataLayer.push({ event, ...params });
+  const mapped: Record<string, string> = { insurance_product_select: "ViewContent", generate_lead: "Lead", whatsapp_click: "Contact" };
+  if (mapped[event] && w.fbq) w.fbq("track", mapped[event], event === "insurance_product_select" ? { content_name: params.insurance_product || "seguro" } : {});
 }
 
 export default function Home() {
@@ -34,6 +37,23 @@ export default function Home() {
       setForm((current) => ({ ...current, product: p as Product }));
     }
   }, []);
+
+  useEffect(() => {
+    if (consent === "accepted" && process.env.NEXT_PUBLIC_META_PIXEL_ID && !document.getElementById("meta-pixel-loader")) {
+      const w = window as Window & { fbq?: (...args: unknown[]) => void };
+      if (!w.fbq) {
+        const f = function (...args: unknown[]) { const q = f as typeof f & { queue?: unknown[] }; (q.queue = q.queue || []).push(args); } as Window["fbq"];
+        w.fbq = f as unknown as (...args: unknown[]) => void;
+      }
+      w.fbq("init", process.env.NEXT_PUBLIC_META_PIXEL_ID);
+      w.fbq("track", "PageView");
+      const pixel = document.createElement("script");
+      pixel.id = "meta-pixel-loader";
+      pixel.async = true;
+      pixel.src = "https://connect.facebook.net/en_US/fbevents.js";
+      document.head.appendChild(pixel);
+    }
+  }, [consent]);
 
   useEffect(() => {
     if (consent === "accepted" && process.env.NEXT_PUBLIC_GTM_ID && !document.getElementById("gtm-loader")) {
