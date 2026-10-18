@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 
 type Product = "auto" | "moto" | "hogar" | "consorcio" | "bicicletas" | "caucion_alquiler";
-type FormState = { name: string; phone: string; city: string; product: Product; make: string; model: string; year: string; homeType: string; coverage: string; businessType: string; privacyAccepted: boolean };
+type FormState = { name: string; phone: string; province: string; product: Product; make: string; model: string; year: string; homeSqm: string; location: string; occupancy: string; constructionMaterial: string; activity: string; wheelSize: string; bikeMaterial: string; insuredAmount: string; monthlyRent: string; contractDuration: string; privacyAccepted: boolean };
 const products: { id: Product; title: string; desc: string; icon: string }[] = [
   { id: "auto", title: "Autos", desc: "Protección para tu vehículo", icon: "🚘" },
   { id: "moto", title: "Motos", desc: "Movete con respaldo", icon: "🏍️" },
