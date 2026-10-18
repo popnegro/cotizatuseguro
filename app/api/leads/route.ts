@@ -7,12 +7,46 @@ export const dynamic = "force-dynamic";
 
 const attributionSchema = z.record(z.string(), z.string().max(500)).optional().default({});
 const schema = z.object({
-  name: z.string().trim().min(2).max(100),
+  name: z.string().trim().min(2).max(100).refine((value) => value.split(/\s+/).length >= 2, "Ingresá nombre y apellido"),
+  email: z.string().trim().email().max(254),
   phone: z.string().trim().min(8).max(30),
-  city: z.string().trim().min(2).max(100),
+  province: z.string().trim().min(2).max(100),
+  city: z.string().trim().max(100).optional().default(""),
   product: z.enum(["auto", "moto", "hogar", "comercio", "bicicletas", "vida", "accidentes_personales", "art", "consorcio", "viajes", "caucion_alquiler"]),
-  details: z.record(z.string(), z.string().max(200)).optional().default({}),
+  details: z.record(z.string(), z.string().trim().max(200)).optional().default({}),
   attribution: attributionSchema
+}).superRefine((data, ctx) => {
+  const requiredByProduct: Record<string, string[]> = {
+    auto: ["make", "model", "year"],
+    moto: ["make", "model", "year"],
+    hogar: ["homeSqm", "location", "occupancy"],
+    consorcio: ["homeSqm", "location", "constructionMaterial", "activity"],
+    bicicletas: ["make", "model", "year", "wheelSize", "bikeMaterial", "insuredAmount"],
+    caucion_alquiler: ["monthlyRent", "contractDuration"]
+  };
+  for (const key of requiredByProduct[data.product] || []) {
+    if (!data.details[key]?.trim()) ctx.addIssue({ code: "custom", path: ["details", key], message: `Falta completar: ${key}` });
+  }
+  if (["auto", "moto", "bicicletas"].includes(data.product)) {
+    const year = Number(data.details.year);
+    if (!Number.isInteger(year) || year < 1900 || year > new Date().getFullYear() + 1) {
+      ctx.addIssue({ code: "custom", path: ["details", "year"], message: "El año no es válido" });
+    }
+  }
+  for (const key of ["homeSqm", "insuredAmount", "monthlyRent"]) {
+    if (data.details[key] !== undefined && (!Number.isFinite(Number(data.details[key])) || Number(data.details[key]) <= 0)) {
+      ctx.addIssue({ code: "custom", path: ["details", key], message: "Ingresá un importe o valor positivo" });
+    }
+  }
+  if (data.details.contractDuration !== undefined) {
+    const duration = Number(data.details.contractDuration);
+    if (!Number.isInteger(duration) || duration < 1 || duration > 120) {
+      ctx.addIssue({ code: "custom", path: ["details", "contractDuration"], message: "La duración debe ser de 1 a 120 meses" });
+    }
+  }
+  if (data.product === "hogar" && !["propia", "alquiler"].includes(data.details.occupancy || "")) {
+    ctx.addIssue({ code: "custom", path: ["details", "occupancy"], message: "Seleccioná vivienda propia o alquiler" });
+  }
 });
 
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
@@ -54,16 +88,22 @@ export async function POST(request: NextRequest) {
   const data = parsed.data;
   const requestId = `SOL-${randomUUID().slice(0, 8).toUpperCase()}`;
   const phone = data.phone.replace(/[\s().-]/g, "");
+  const nameParts = data.name.trim().split(/\s+/);
+  const firstname = nameParts.shift() || data.name;
+  const lastname = nameParts.join(" ");
   const properties: Record<string, string> = {
-    firstname: data.name,
+    email: data.email,
+    firstname,
     phone,
-    city: data.city,
+    state: data.province,
+    city: data.city || data.province,
     lifecyclestage: "lead",
     insurance_product: data.product,
     insurance_request_id: requestId,
     insurance_request_details: JSON.stringify(data.details).slice(0, 900),
     lead_source: data.attribution.utm_source?.trim() || "direct"
   };
+  if (lastname) properties.lastname = lastname;
 
   // HubSpot string properties should be omitted when attribution is absent,
   // rather than sent as empty strings that can trigger CRM validation errors.
