@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 const attributionSchema = z.record(z.string(), z.string().max(500)).optional().default({});
 const schema = z.object({
-  name: z.string().trim().min(2).max(100),
+  name: z.string().trim().min(2).max(100).refine((value) => value.split(/\s+/).length >= 2, "Ingresá nombre y apellido"),
   email: z.string().trim().email().max(254),
   phone: z.string().trim().min(8).max(30),
   province: z.string().trim().min(2).max(100),
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
 
   const data = parsed.data;
   const requestId = `SOL-${randomUUID().slice(0, 8).toUpperCase()}`;
-  const phone = data.phone.replace(/[\\s().-]/g, "");
-  const nameParts = data.name.trim().split(/\\s+/);
+  const phone = data.phone.replace(/[\s().-]/g, "");
+  const nameParts = data.name.trim().split(/\s+/);
   const firstname = nameParts.shift() || data.name;
   const lastname = nameParts.join(" ");
   const properties: Record<string, string> = {
