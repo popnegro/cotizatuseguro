@@ -126,7 +126,7 @@ test("accepts every HubSpot insurance_product option and omits blank attribution
         email: "qa.test@example.test",
         phone: "+54 261 555 0101",
         province: "Mendoza",
-        city: "Mendoza",
+        city: ["hogar", "consorcio"].includes(product) ? "Mendoza" : "",
         product,
         details: detailsByProduct[product] || {},
         attribution: { utm_source: "  ", utm_medium: "", gclid: "  " }
@@ -142,6 +142,7 @@ test("accepts every HubSpot insurance_product option and omits blank attribution
     validProducts
   );
   for (const { properties } of capturedPayloads) {
+    assert.equal(properties.city, "Mendoza", "empty city should fall back to province");
     assert.equal(properties.lead_source, "direct");
     for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"]) {
       assert.equal(Object.hasOwn(properties, key), false, `unexpected blank attribution property: ${key}`);
