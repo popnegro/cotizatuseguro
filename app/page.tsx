@@ -3,14 +3,25 @@
 import { FormEvent, useEffect, useState } from "react";
 
 type Product = "auto" | "moto" | "hogar" | "consorcio" | "bicicletas" | "caucion_alquiler";
-type FormState = { name: string; phone: string; province: string; product: Product; make: string; model: string; year: string; homeSqm: string; location: string; occupancy: string; constructionMaterial: string; activity: string; wheelSize: string; bikeMaterial: string; insuredAmount: string; monthlyRent: string; contractDuration: string; privacyAccepted: boolean };
+type FormState = {
+  name: string; email: string; phone: string; province: string; product: Product;
+  make: string; model: string; year: string; homeSqm: string; location: string; occupancy: string;
+  constructionMaterial: string; activity: string; wheelSize: string; bikeMaterial: string;
+  insuredAmount: string; monthlyRent: string; contractDuration: string; privacyAccepted: boolean;
+};
 const products: { id: Product; title: string; desc: string; icon: string }[] = [
   { id: "auto", title: "Autos", desc: "Protección para tu vehículo", icon: "🚘" },
   { id: "moto", title: "Motos", desc: "Movete con respaldo", icon: "🏍️" },
   { id: "hogar", title: "Hogar", desc: "Protegé tu casa y tus cosas", icon: "🏡" },
-  { id: "comercio", title: "Comercios", desc: "Cuidá tu negocio", icon: "🏪" }
+  { id: "consorcio", title: "Consorcio", desc: "Protección para edificios", icon: "🏢" },
+  { id: "bicicletas", title: "Bicicleta", desc: "Cuidá tu bicicleta", icon: "🚲" },
+  { id: "caucion_alquiler", title: "Caución alquiler", desc: "Garantía para alquilar", icon: "🔑" }
 ];
-const initialForm: FormState = { name: "", phone: "", city: "Mendoza", product: "auto", make: "", model: "", year: "", homeType: "Casa", coverage: "A definir con asesoramiento", businessType: "", privacyAccepted: false };
+const initialForm: FormState = {
+  name: "", email: "", phone: "", province: "", product: "auto", make: "", model: "", year: "",
+  homeSqm: "", location: "", occupancy: "", constructionMaterial: "", activity: "", wheelSize: "",
+  bikeMaterial: "", insuredAmount: "", monthlyRent: "", contractDuration: "", privacyAccepted: false
+};
 
 function track(event: string, params: Record<string, string> = {}) {
   if (typeof window === "undefined" || window.localStorage.getItem("analytics-consent") !== "accepted") return;
@@ -33,7 +44,7 @@ export default function Home() {
     if (saved === "accepted" || saved === "rejected") setConsent(saved);
     const params = new URLSearchParams(window.location.search);
     const p = params.get("producto");
-    if (p && ["auto", "moto", "hogar", "comercio"].includes(p)) {
+    if (p && ["auto", "moto", "hogar", "consorcio", "bicicletas", "caucion_alquiler"].includes(p)) {
       setForm((current) => ({ ...current, product: p as Product }));
     }
   }, []);
@@ -110,9 +121,20 @@ export default function Home() {
       const response = await fetch("/api/leads", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: form.name, phone: form.phone, city: form.city, product: form.product,
-          details: form.product === "auto" || form.product === "moto" ? { make: form.make, model: form.model, year: form.year } :
-            form.product === "hogar" ? { homeType: form.homeType, coverage: form.coverage } : { businessType: form.businessType },
+          name: form.name, email: form.email, phone: form.phone, province: form.province,
+          city: form.product === "hogar" || form.product === "consorcio" ? form.location : "",
+          product: form.product,
+          details: form.product === "auto" || form.product === "moto"
+            ? { make: form.make, model: form.model, year: form.year }
+            : form.product === "hogar"
+              ? { homeSqm: form.homeSqm, location: form.location, occupancy: form.occupancy }
+              : form.product === "consorcio"
+                ? { homeSqm: form.homeSqm, location: form.location, constructionMaterial: form.constructionMaterial, activity: form.activity }
+                : form.product === "bicicletas"
+                  ? { make: form.make, model: form.model, year: form.year, wheelSize: form.wheelSize, bikeMaterial: form.bikeMaterial, insuredAmount: form.insuredAmount }
+                  : form.product === "caucion_alquiler"
+                    ? { monthlyRent: form.monthlyRent, contractDuration: form.contractDuration }
+                    : {},
           attribution: Object.fromEntries(["utm_source","utm_medium","utm_campaign","utm_content","utm_term","gclid","fbclid"].map((key) => [key, new URLSearchParams(window.location.search).get(key) || ""]))
         })
       });
@@ -167,19 +189,38 @@ export default function Home() {
             <form onSubmit={submit}>
               <div className="form-grid">
                 <div className="field field-full"><label htmlFor="product">Tipo de seguro *</label><select id="product" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value as Product })}>{products.map((p) => <option value={p.id} key={p.id}>{p.title}</option>)}</select></div>
-                <div className="field"><label htmlFor="name">Nombre *</label><input id="name" name="name" autoComplete="name" required maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-                <div className="field"><label htmlFor="phone">WhatsApp de contacto *</label><input id="phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" required minLength={8} maxLength={30} placeholder="Código de área + número" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-                <div className="field field-full"><label htmlFor="city">Localidad *</label><input id="city" name="city" autoComplete="address-level2" required maxLength={100} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
+                <div className="field"><label htmlFor="name">Nombre y apellido *</label><input id="name" name="name" autoComplete="name" required minLength={2} maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                <div className="field"><label htmlFor="phone">WhatsApp *</label><input id="phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" required minLength={8} maxLength={30} placeholder="Código de área + número" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+                <div className="field"><label htmlFor="email">Email *</label><input id="email" name="email" type="email" autoComplete="email" required maxLength={254} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+                <div className="field"><label htmlFor="province">Provincia *</label><input id="province" name="province" autoComplete="address-level1" required maxLength={100} value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })} /></div>
                 {(form.product === "auto" || form.product === "moto") && <>
-                  <div className="field"><label htmlFor="make">Marca *</label><input id="make" required value={form.make} maxLength={80} onChange={(e) => setForm({ ...form, make: e.target.value })} /></div>
-                  <div className="field"><label htmlFor="model">Modelo *</label><input id="model" required value={form.model} maxLength={80} onChange={(e) => setForm({ ...form, model: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="make">Marca *</label><input id="make" required maxLength={80} value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="model">Modelo *</label><input id="model" required maxLength={80} value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></div>
                   <div className="field"><label htmlFor="year">Año *</label><input id="year" required type="number" min="1900" max={new Date().getFullYear()+1} value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} /></div>
                 </>}
                 {form.product === "hogar" && <>
-                  <div className="field"><label htmlFor="homeType">Tipo de vivienda</label><select id="homeType" value={form.homeType} onChange={(e) => setForm({ ...form, homeType: e.target.value })}><option>Casa</option><option>Departamento</option><option>Otra</option></select></div>
-                  <div className="field"><label htmlFor="coverage">Cobertura de interés</label><select id="coverage" value={form.coverage} onChange={(e) => setForm({ ...form, coverage: e.target.value })}><option>A definir con asesoramiento</option><option>Incendio</option><option>Robo</option><option>Responsabilidad civil</option><option>Integral de hogar</option></select></div>
+                  <div className="field"><label htmlFor="homeSqm">Metros cuadrados cubiertos *</label><input id="homeSqm" required type="number" min="1" step="1" value={form.homeSqm} onChange={(e) => setForm({ ...form, homeSqm: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="location">Ubicación *</label><input id="location" required maxLength={160} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="occupancy">La vivienda es *</label><select id="occupancy" required value={form.occupancy} onChange={(e) => setForm({ ...form, occupancy: e.target.value })}><option value="">Seleccioná una opción</option><option value="propia">Propia</option><option value="alquiler">Alquiler</option></select></div>
                 </>}
-                {form.product === "comercio" && <div className="field field-full"><label htmlFor="businessType">Actividad comercial</label><input id="businessType" maxLength={120} value={form.businessType} onChange={(e) => setForm({ ...form, businessType: e.target.value })} /></div>}
+                {form.product === "consorcio" && <>
+                  <div className="field"><label htmlFor="homeSqm">Metros cuadrados cubiertos *</label><input id="homeSqm" required type="number" min="1" step="1" value={form.homeSqm} onChange={(e) => setForm({ ...form, homeSqm: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="location">Ubicación *</label><input id="location" required maxLength={160} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="constructionMaterial">Material de construcción *</label><input id="constructionMaterial" required maxLength={100} value={form.constructionMaterial} onChange={(e) => setForm({ ...form, constructionMaterial: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="activity">Actividad *</label><input id="activity" required maxLength={120} value={form.activity} onChange={(e) => setForm({ ...form, activity: e.target.value })} /></div>
+                </>}
+                {form.product === "bicicletas" && <>
+                  <div className="field"><label htmlFor="make">Marca *</label><input id="make" required maxLength={80} value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="model">Modelo *</label><input id="model" required maxLength={80} value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="year">Año *</label><input id="year" required type="number" min="1900" max={new Date().getFullYear()+1} value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="wheelSize">Rodado *</label><input id="wheelSize" required maxLength={30} placeholder="Ej. 29”" value={form.wheelSize} onChange={(e) => setForm({ ...form, wheelSize: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="bikeMaterial">Material *</label><input id="bikeMaterial" required maxLength={80} value={form.bikeMaterial} onChange={(e) => setForm({ ...form, bikeMaterial: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="insuredAmount">Suma asegurada (ARS) *</label><input id="insuredAmount" required type="number" min="1" step="0.01" value={form.insuredAmount} onChange={(e) => setForm({ ...form, insuredAmount: e.target.value })} /></div>
+                </>}
+                {form.product === "caucion_alquiler" && <>
+                  <div className="field"><label htmlFor="monthlyRent">Alquiler mensual (ARS) *</label><input id="monthlyRent" required type="number" min="1" step="0.01" value={form.monthlyRent} onChange={(e) => setForm({ ...form, monthlyRent: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="contractDuration">Duración del contrato (meses) *</label><input id="contractDuration" required type="number" min="1" max="120" step="1" value={form.contractDuration} onChange={(e) => setForm({ ...form, contractDuration: e.target.value })} /></div>
+                </>}
               </div>
               <label className="consent-row"><input type="checkbox" checked={form.privacyAccepted} onChange={(e) => setForm({ ...form, privacyAccepted: e.target.checked })} required /><span>Leí la <a href="/privacidad" target="_blank" rel="noreferrer">política de privacidad</a> y solicito que utilicen estos datos para gestionar mi cotización.</span></label>
               <button className="button button-wide" type="submit" disabled={busy}>{busy ? "Registrando solicitud…" : "Registrar y continuar por WhatsApp"} <span aria-hidden="true">→</span></button>
