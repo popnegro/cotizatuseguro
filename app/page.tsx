@@ -171,9 +171,9 @@ export default function Home() {
                 <div className="field"><label htmlFor="phone">WhatsApp de contacto *</label><input id="phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" required minLength={8} maxLength={30} placeholder="Código de área + número" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
                 <div className="field field-full"><label htmlFor="city">Localidad *</label><input id="city" name="city" autoComplete="address-level2" required maxLength={100} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
                 {(form.product === "auto" || form.product === "moto") && <>
-                  <div className="field"><label htmlFor="make">Marca</label><input id="make" value={form.make} maxLength={80} onChange={(e) => setForm({ ...form, make: e.target.value })} /></div>
-                  <div className="field"><label htmlFor="model">Modelo</label><input id="model" value={form.model} maxLength={80} onChange={(e) => setForm({ ...form, model: e.target.value })} /></div>
-                  <div className="field"><label htmlFor="year">Año</label><input id="year" type="number" min="1900" max={new Date().getFullYear()+1} value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="make">Marca *</label><input id="make" required value={form.make} maxLength={80} onChange={(e) => setForm({ ...form, make: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="model">Modelo *</label><input id="model" required value={form.model} maxLength={80} onChange={(e) => setForm({ ...form, model: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="year">Año *</label><input id="year" required type="number" min="1900" max={new Date().getFullYear()+1} value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} /></div>
                 </>}
                 {form.product === "hogar" && <>
                   <div className="field"><label htmlFor="homeType">Tipo de vivienda</label><select id="homeType" value={form.homeType} onChange={(e) => setForm({ ...form, homeType: e.target.value })}><option>Casa</option><option>Departamento</option><option>Otra</option></select></div>
