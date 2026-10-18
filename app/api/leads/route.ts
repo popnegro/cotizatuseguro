@@ -38,6 +38,15 @@ const schema = z.object({
       ctx.addIssue({ code: "custom", path: ["details", key], message: "Ingresá un importe o valor positivo" });
     }
   }
+  if (data.details.contractDuration !== undefined) {
+    const duration = Number(data.details.contractDuration);
+    if (!Number.isInteger(duration) || duration < 1 || duration > 120) {
+      ctx.addIssue({ code: "custom", path: ["details", "contractDuration"], message: "La duración debe ser de 1 a 120 meses" });
+    }
+  }
+  if (data.product === "hogar" && !["propia", "alquiler"].includes(data.details.occupancy || "")) {
+    ctx.addIssue({ code: "custom", path: ["details", "occupancy"], message: "Seleccioná vivienda propia o alquiler" });
+  }
 });
 
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
