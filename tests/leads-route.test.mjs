@@ -30,7 +30,9 @@ test("creates a lead using HubSpot properties without calling the live CRM", asy
     headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.10" },
     body: JSON.stringify({
       name: "QA Integration",
+      email: "qa.integration@example.test",
       phone: "+54 261 555 0101",
+      province: "Mendoza",
       city: "Mendoza",
       product: "auto",
       details: { make: "QA", model: "Test", year: "2024" },
@@ -48,7 +50,10 @@ test("creates a lead using HubSpot properties without calling the live CRM", asy
   assert.equal(payload.contactId, "test-contact-id");
   assert.match(payload.requestId, /^SOL-[A-F0-9]{8}$/);
   assert.equal(fetchMock.mock.callCount(), 1);
-  assert.equal(captured.properties.firstname, "QA Integration");
+  assert.equal(captured.properties.email, "qa.integration@example.test");
+  assert.equal(captured.properties.firstname, "QA");
+  assert.equal(captured.properties.lastname, "Integration");
+  assert.equal(captured.properties.state, "Mendoza");
   assert.equal(captured.properties.insurance_product, "auto");
   assert.equal(captured.properties.utm_source, "qa");
   assert.equal(captured.properties.utm_campaign, "p0-validation");
@@ -92,6 +97,14 @@ test("accepts every HubSpot insurance_product option and omits blank attribution
     "accidentes_personales", "art", "consorcio", "viajes", "caucion_alquiler"
   ];
   const capturedPayloads = [];
+  const detailsByProduct = {
+    auto: { make: "QA", model: "Test", year: "2024" },
+    moto: { make: "QA", model: "Test", year: "2024" },
+    hogar: { homeSqm: "80", location: "Mendoza", occupancy: "propia" },
+    consorcio: { homeSqm: "800", location: "Mendoza", constructionMaterial: "hormigón", activity: "vivienda" },
+    bicicletas: { make: "QA", model: "Test", year: "2024", wheelSize: "29", bikeMaterial: "aluminio", insuredAmount: "500000" },
+    caucion_alquiler: { monthlyRent: "250000", contractDuration: "24" }
+  };
   const fetchMock = mock.method(globalThis, "fetch", async (_url, init) => {
     capturedPayloads.push(JSON.parse(init.body));
     return new Response(JSON.stringify({ id: "test-contact-id" }), {
@@ -110,9 +123,12 @@ test("accepts every HubSpot insurance_product option and omits blank attribution
       },
       body: JSON.stringify({
         name: "QA Test",
+        email: "qa.test@example.test",
         phone: "+54 261 555 0101",
+        province: "Mendoza",
         city: "Mendoza",
         product,
+        details: detailsByProduct[product] || {},
         attribution: { utm_source: "  ", utm_medium: "", gclid: "  " }
       })
     });
@@ -131,4 +147,33 @@ test("accepts every HubSpot insurance_product option and omits blank attribution
       assert.equal(Object.hasOwn(properties, key), false, `unexpected blank attribution property: ${key}`);
     }
   }
+});
+
+test("requires contact email, province, and product-specific details before contacting HubSpot", async (t) => {
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+  });
+  const fetchMock = mock.method(globalThis, "fetch", async () => {
+    throw new Error("HubSpot must not be called for incomplete data");
+  });
+  t.after(() => fetchMock.mock.restore());
+
+  const incompletePayloads = [
+    { name: "QA Test", phone: "+54 261 555 0101", province: "Mendoza", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
+    { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
+    { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", province: "Mendoza", product: "bicicletas", details: { make: "Trek" } }
+  ];
+  for (const [index, body] of incompletePayloads.entries()) {
+    const request = new NextRequest("https://preview.example.test/api/leads", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": `192.0.2.${70 + index}` },
+      body: JSON.stringify(body)
+    });
+    const response = await POST(request);
+    assert.equal(response.status, 400);
+  }
+  assert.equal(fetchMock.mock.callCount(), 0);
 });
