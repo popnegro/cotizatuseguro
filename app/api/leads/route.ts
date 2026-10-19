@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 const attributionSchema = z.record(z.string(), z.string().max(500)).optional().default({});
 const schema = z.object({
+  website: z.string().max(200).optional().default(""),
   name: z.string().trim().min(2).max(100).refine((value) => value.split(/\s+/).length >= 2, "Ingresá nombre y apellido"),
   email: z.string().trim().email().max(254),
   phone: z.string().trim().min(8).max(30),
@@ -86,6 +87,8 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return jsonError("Revisá los datos obligatorios del formulario.", 400);
 
   const data = parsed.data;
+  // Honeypot: silently reject automated submissions before any CRM request.
+  if (data.website.trim()) return jsonError("No pudimos procesar la solicitud. Revisá los datos e intentá nuevamente.", 400);
   const requestId = `SOL-${randomUUID().slice(0, 8).toUpperCase()}`;
   const phone = data.phone.replace(/[\s().-]/g, "");
   const nameParts = data.name.trim().split(/\s+/);
