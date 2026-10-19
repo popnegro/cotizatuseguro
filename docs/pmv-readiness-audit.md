@@ -18,7 +18,7 @@ Production/QA URL currently observed: `https://cotizatuseguro.vercel.app/`
 | `feat/pmv-landing-foundation` | `2a678501ad365d72084a4235fdd55cf81031e7c6` | Older foundation branch; do not select over the current baseline. |
 | `feat/meta-pixel-consent-qa` | `931500487370d66943ffabca6815de37017b28f6` | Older analytics branch; its landing page exposes an older four-product form. Do not use as the candidate. |
 
-No open pull requests were returned by the repository PR search. Vercel checks were successful for the observed branch heads, but this is not evidence of a successful live HubSpot write or of correct GA4/Meta event delivery.
+PR #7 is the active draft. Vercel checks must be re-run against the current head; a successful deployment is not evidence of a successful live HubSpot write or of correct GA4/Meta event delivery.
 
 ## Findings and required actions
 
@@ -31,10 +31,10 @@ No open pull requests were returned by the repository PR search. Vercel checks w
 
 ### P1 — Resolve before launch
 
-5. **Product scope must be explicit.** The public form exposes six products: auto, moto, hogar, consorcio, bicicletas and caución alquiler. The API accepts eleven values, including comercio, vida, accidentes personales, ART and viajes. Keep the UI at six only if that is the approved PMV scope; otherwise add the missing form schemas and product-specific required fields before advertising them.
+5. **Product scope must be explicit.** The public form exposes six products: auto, moto, hogar, consorcio, bicicletas and caución alquiler. The API product enum is being narrowed to the six products exposed by the PMV: auto, moto, hogar, consorcio, bicicletas and caución alquiler. Do not advertise additional categories without a separately approved scope and complete form validation.
 6. **Rate limiting is process-local.** The in-memory map can reset across serverless instances and is not a reliable distributed abuse-control mechanism. Evaluate a shared rate limiter before scaling or running paid campaigns.
 7. **Lead durability and retries.** The API does not persist a lead independently of HubSpot. If HubSpot is unavailable, no durable local queue exists. Verify operational handling for 429/5xx responses and establish an alert/retry policy before relying on paid acquisition.
-8. **Attribution configuration.** GA4 direct loading and GTM are both supported. Confirm the GTM container does not duplicate GA4 configuration or Pixel events already sent by the app.
+8. **Attribution configuration.** GTM is the sole browser-tag entry point after analytics consent. Validate the GTM container has the intended GA4 and Meta tags and maps each custom dataLayer event exactly once; the code no longer loads GA4 or Meta Pixel directly.
 
 ### P2 — Quality and discoverability
 
@@ -46,7 +46,7 @@ No open pull requests were returned by the repository PR search. Vercel checks w
 
 - [ ] HubSpot QA contact created and independently found in the intended portal.
 - [ ] All six displayed product flows pass positive and negative validation.
-- [ ] Product scope (six versus eleven) explicitly documented.
+- [ ] API accepts only the six PMV product categories.
 - [ ] WhatsApp handoff verified on desktop and mobile.
 - [ ] Consent rejection blocks analytics/ad tags; acceptance enables only intended tags.
 - [ ] GA4 and Meta events observed once per intended action; no duplicate conversions.
