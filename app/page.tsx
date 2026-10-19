@@ -127,9 +127,11 @@ export default function Home() {
     setBusy(true);
     track("form_submit", { insurance_product: form.product });
     try {
+      const honeypot = new FormData(event.currentTarget).get("website");
       const response = await fetch("/api/leads", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          website: typeof honeypot === "string" ? honeypot : "",
           name: form.name, email: form.email, phone: form.phone, province: form.province,
           city: form.product === "hogar" || form.product === "consorcio" ? form.location : "",
           product: form.product,
@@ -196,6 +198,7 @@ export default function Home() {
           <div className="quote-card"><h2>¿Qué necesitás asegurar?</h2><p className="help">Los campos con * son obligatorios.</p>
             {error && <div className="form-error" role="alert">{error}</div>}{success && <div className="form-success" role="status">{success}</div>}
             <form onSubmit={submit}>
+              <div aria-hidden="true" className="honeypot-field"><label htmlFor="website">Dejá este campo vacío</label><input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" /></div>
               <div className="form-grid">
                 <div className="field field-full"><label htmlFor="product">Tipo de seguro *</label><select id="product" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value as Product })}>{products.map((p) => <option value={p.id} key={p.id}>{p.title}</option>)}</select></div>
                 <div className="field"><label htmlFor="name">Nombre y apellido *</label><input id="name" name="name" autoComplete="name" required minLength={2} pattern=".*\s+.*" title="Ingresá nombre y apellido" maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
