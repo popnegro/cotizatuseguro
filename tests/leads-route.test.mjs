@@ -247,3 +247,36 @@ test("maps HubSpot duplicate and transient failures to safe client responses", a
     fetchMock.mock.restore();
   }
 });
+
+
+test("rejects honeypot submissions before contacting HubSpot", async (t) => {
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+  });
+
+  const fetchMock = mock.method(globalThis, "fetch", async () => {
+    throw new Error("HubSpot must not be called for honeypot submissions");
+  });
+  t.after(() => fetchMock.mock.restore());
+
+  const request = new NextRequest("https://preview.example.test/api/leads", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.245" },
+    body: JSON.stringify({
+      website: "https://spam.example",
+      name: "QA Bot",
+      email: "qa.bot@example.test",
+      phone: "+54 261 555 0101",
+      province: "Mendoza",
+      product: "auto",
+      details: { make: "QA", model: "Test", year: "2024" }
+    })
+  });
+
+  const response = await POST(request);
+  assert.equal(response.status, 400);
+  assert.equal(fetchMock.mock.callCount(), 0);
+});
