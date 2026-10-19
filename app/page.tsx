@@ -177,7 +177,7 @@ export default function Home() {
           <div>
             <span className="eyebrow">Seguros con asesoramiento personalizado</span>
             <h1>Tu tranquilidad empieza con una buena cobertura.</h1>
-            <p className="lead">Encontrá la protección que necesitás para tu vehículo, tu hogar o tu comercio. Contame qué querés asegurar y te ayudo a cotizar.</p>
+            <p className="lead">Encontrá la protección que necesitás para tu vehículo, tu hogar, tu edificio, tu bicicleta o tu alquiler. Contame qué querés asegurar y te ayudo a cotizar.</p>
             <div className="hero-actions"><a className="button" href="#cotizar" onClick={() => track("cta_click", { cta_location: "hero" })}>Quiero cotizar <span aria-hidden="true">→</span></a><a className="secondary" href="#seguros">Ver seguros</a></div>
             <p className="trustline">Asesoramiento personal · Atención por WhatsApp · Mendoza</p>
           </div>
