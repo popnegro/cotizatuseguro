@@ -3,7 +3,14 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Política de privacidad | Agustín Montes",
-  description: "Información sobre el uso de datos en las solicitudes de cotización de seguros."
+  description: "Información sobre el tratamiento de datos enviados para solicitar una cotización de seguros a Agustín Montes.",
+  alternates: { canonical: "/privacidad" },
+  openGraph: {
+    title: "Política de privacidad | Agustín Montes",
+    description: "Información sobre el tratamiento de datos de solicitudes de cotización.",
+    type: "website",
+    locale: "es_AR"
+  }
 };
 
 export default function PrivacyPage() {
