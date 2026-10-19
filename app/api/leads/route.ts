@@ -12,7 +12,7 @@ const schema = z.object({
   phone: z.string().trim().min(8).max(30),
   province: z.string().trim().min(2).max(100),
   city: z.string().trim().max(100).optional().default(""),
-  product: z.enum(["auto", "moto", "hogar", "comercio", "bicicletas", "vida", "accidentes_personales", "art", "consorcio", "viajes", "caucion_alquiler"]),
+  product: z.enum(["auto", "moto", "hogar", "consorcio", "bicicletas", "caucion_alquiler"]),
   details: z.record(z.string(), z.string().trim().max(200)).optional().default({}),
   attribution: attributionSchema
 }).superRefine((data, ctx) => {
