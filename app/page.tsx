@@ -40,14 +40,17 @@ function track(event: string, params: Record<string, string> = {}, eventCallback
 function trackAndWait(event: string, params: Record<string, string> = {}) {
   return new Promise<void>((resolve) => {
     let settled = false;
-    let timeoutId: number | undefined;
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    }, 1200);
     const finish = () => {
       if (settled) return;
       settled = true;
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      window.clearTimeout(timeoutId);
       resolve();
     };
-    timeoutId = window.setTimeout(finish, 1200);
     track(event, params, finish);
   });
 }
