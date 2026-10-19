@@ -198,3 +198,52 @@ test("requires contact email, province, and product-specific details before cont
   }
   assert.equal(fetchMock.mock.callCount(), 0);
 });
+
+
+test("maps HubSpot duplicate and transient failures to safe client responses", async (t) => {
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+  });
+
+  const cases = [
+    { upstreamStatus: 409, expectedStatus: 409 },
+    { upstreamStatus: 429, expectedStatus: 503 },
+    { upstreamStatus: 500, expectedStatus: 503 },
+    { upstreamStatus: 400, expectedStatus: 502 }
+  ];
+
+  for (const [index, scenario] of cases.entries()) {
+    const fetchMock = mock.method(globalThis, "fetch", async () => new Response(
+      JSON.stringify({ message: "sensitive upstream details must not leak" }),
+      { status: scenario.upstreamStatus, headers: { "Content-Type": "application/json" } }
+    ));
+    t.after(() => fetchMock.mock.restore());
+
+    const request = new NextRequest("https://preview.example.test/api/leads", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": `192.0.2.${180 + index}`
+      },
+      body: JSON.stringify({
+        name: "QA Failure",
+        email: `qa.failure.${index}@example.test`,
+        phone: "+54 261 555 0101",
+        province: "Mendoza",
+        product: "auto",
+        details: { make: "QA", model: "Test", year: "2024" }
+      })
+    });
+
+    const response = await POST(request);
+    assert.equal(response.status, scenario.expectedStatus);
+    const body = await response.json();
+    assert.equal(body.ok, undefined);
+    assert.doesNotMatch(JSON.stringify(body), /sensitive upstream details/);
+    assert.equal(fetchMock.mock.callCount(), 1);
+    fetchMock.mock.restore();
+  }
+});
