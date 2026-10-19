@@ -23,11 +23,33 @@ const initialForm: FormState = {
   bikeMaterial: "", insuredAmount: "", monthlyRent: "", contractDuration: "", privacyAccepted: false
 };
 
-function track(event: string, params: Record<string, string> = {}) {
-  if (typeof window === "undefined" || window.localStorage.getItem("analytics-consent") !== "accepted") return;
+function track(event: string, params: Record<string, string> = {}, eventCallback?: () => void) {
+  if (typeof window === "undefined" || window.localStorage.getItem("analytics-consent") !== "accepted") {
+    eventCallback?.();
+    return;
+  }
   const w = window as Window & { dataLayer?: Record<string, unknown>[] };
   w.dataLayer = w.dataLayer || [];
-  w.dataLayer.push({ event, ...params });
+  w.dataLayer.push({
+    event,
+    ...params,
+    ...(eventCallback ? { eventCallback, eventTimeout: 1200 } : {})
+  });
+}
+
+function trackAndWait(event: string, params: Record<string, string> = {}) {
+  return new Promise<void>((resolve) => {
+    let settled = false;
+    let timeoutId: number | undefined;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      resolve();
+    };
+    timeoutId = window.setTimeout(finish, 1200);
+    track(event, params, finish);
+  });
 }
 
 export default function Home() {
@@ -114,7 +136,7 @@ export default function Home() {
       setSuccess("Solicitud registrada. Ahora podés continuar por WhatsApp.");
       const label = products.find((item) => item.id === form.product)?.title || form.product;
       const message = encodeURIComponent(`Hola, quiero solicitar una cotización de seguro para ${label.toLowerCase()}. Mi número de solicitud es ${data.requestId}.`);
-      track("whatsapp_click", { insurance_product: form.product });
+      await trackAndWait("whatsapp_click", { insurance_product: form.product });
       window.location.href = `https://wa.me/${number.replace(/[^0-9]/g, "")}?text=${message}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ocurrió un error inesperado. Intentá nuevamente.");
