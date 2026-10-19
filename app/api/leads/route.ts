@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server.js";
 import { z } from "zod";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,30 +52,53 @@ const schema = z.object({
   }
 });
 
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 8;
 
-function jsonError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
+function jsonError(message: string, status: number, headers: Record<string, string> = {}) {
+  return NextResponse.json({ error: message }, {
+    status,
+    headers: { "Cache-Control": "no-store", ...headers }
+  });
 }
 
-function rateLimit(key: string) {
-  const now = Date.now();
-  const current = rateBuckets.get(key);
-  if (!current || current.resetAt <= now) {
-    rateBuckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
+let rateLimiter: Ratelimit | undefined;
+function getRateLimiter(): Ratelimit {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) throw new Error("Distributed rate limiter is not configured");
+  if (!rateLimiter) {
+    rateLimiter = new Ratelimit({
+      redis: new Redis({ url, token }),
+      limiter: Ratelimit.slidingWindow(MAX_REQUESTS_PER_WINDOW, "60 s"),
+      prefix: "cotizatuseguro:leads",
+      analytics: false,
+      timeout: 1_500,
+      enableProtection: true
+    });
   }
-  if (current.count >= MAX_REQUESTS_PER_WINDOW) return false;
-  current.count += 1;
-  return true;
+  return rateLimiter;
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  // Vercel provides x-real-ip at the platform boundary. Hash it before using it as a Redis key.
+  const ip = request.headers.get("x-real-ip")?.trim()
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || "";
+  if (!ip) return jsonError("No pudimos validar el origen de la solicitud.", 400);
+
   const ipHash = createHash("sha256").update(ip).digest("hex").slice(0, 24);
-  if (!rateLimit(ipHash)) return jsonError("Demasiadas solicitudes. Esperá un minuto e intentá nuevamente.", 429);
+  let limit: Awaited<ReturnType<Ratelimit["limit"]>>;
+  try {
+    limit = await getRateLimiter().limit(ipHash);
+  } catch (error) {
+    console.error("Distributed rate limiter unavailable", { reason: error instanceof Error ? error.name : "unknown" });
+    // Fail closed: do not forward lead submissions to HubSpot when abuse controls are unavailable.
+    return jsonError("La recepción de solicitudes no está disponible temporalmente. Intentá más tarde.", 503);
+  }
+  if (!limit.success) {
+    const retryAfter = Math.max(1, Math.ceil((limit.reset - Date.now()) / 1000));
+    return jsonError("Demasiadas solicitudes. Esperá antes de intentarlo nuevamente.", 429, { "Retry-After": String(retryAfter) });
+  }
 
   const token = process.env.HUBSPOT_ACCESS_TOKEN;
   if (!token) return jsonError("La recepción de solicitudes todavía no está configurada. Intentá más tarde.", 503);
