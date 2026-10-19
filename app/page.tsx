@@ -24,7 +24,17 @@ const initialForm: FormState = {
 };
 
 function track(event: string, params: Record<string, string> = {}, eventCallback?: () => void) {
-  if (typeof window === "undefined" || window.localStorage.getItem("analytics-consent") !== "accepted") {
+  if (typeof window === "undefined") {
+    eventCallback?.();
+    return;
+  }
+  let consentAccepted = false;
+  try {
+    consentAccepted = window.localStorage.getItem("analytics-consent") === "accepted";
+  } catch {
+    // Storage may be blocked; fail closed for analytics without blocking lead submission.
+  }
+  if (!consentAccepted) {
     eventCallback?.();
     return;
   }
