@@ -25,11 +25,9 @@ const initialForm: FormState = {
 
 function track(event: string, params: Record<string, string> = {}) {
   if (typeof window === "undefined" || window.localStorage.getItem("analytics-consent") !== "accepted") return;
-  const w = window as Window & { dataLayer?: Record<string, unknown>[]; fbq?: (...args: unknown[]) => void };
+  const w = window as Window & { dataLayer?: Record<string, unknown>[] };
   w.dataLayer = w.dataLayer || [];
   w.dataLayer.push({ event, ...params });
-  const mapped: Record<string, string> = { insurance_product_select: "ViewContent", generate_lead: "Lead", whatsapp_click: "Contact" };
-  if (mapped[event] && w.fbq) w.fbq("track", mapped[event], event === "insurance_product_select" ? { content_name: params.insurance_product || "seguro" } : {});
 }
 
 export default function Home() {
@@ -50,53 +48,20 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (consent === "accepted" && process.env.NEXT_PUBLIC_META_PIXEL_ID && !document.getElementById("meta-pixel-loader")) {
-      const w = window as Window & { fbq?: (...args: unknown[]) => void };
-      if (!w.fbq) {
-        const f = function (...args: unknown[]) { const q = f as typeof f & { queue?: unknown[] }; (q.queue = q.queue || []).push(args); } as (...args: unknown[]) => void;
-        w.fbq = f as unknown as (...args: unknown[]) => void;
-      }
-      w.fbq("init", process.env.NEXT_PUBLIC_META_PIXEL_ID);
-      w.fbq("track", "PageView");
-      const pixel = document.createElement("script");
-      pixel.id = "meta-pixel-loader";
-      pixel.async = true;
-      pixel.src = "https://connect.facebook.net/en_US/fbevents.js";
-      document.head.appendChild(pixel);
-    }
-  }, [consent]);
-
-  useEffect(() => {
     if (consent !== "accepted") return;
 
-    // GA4 direct tag: loaded only after analytics consent.
-    const ga4Id = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
-    if (ga4Id && !document.getElementById("ga4-loader")) {
-      const w = window as Window & {
-        dataLayer?: unknown[];
-        gtag?: (...args: unknown[]) => void;
-      };
-      w.dataLayer = w.dataLayer || [];
-      w.gtag = w.gtag || function (...args: unknown[]) { w.dataLayer?.push(args); };
-      w.gtag("js", new Date());
-      w.gtag("config", ga4Id);
-      const ga4Script = document.createElement("script");
-      ga4Script.id = "ga4-loader";
-      ga4Script.async = true;
-      ga4Script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ga4Id)}`;
-      document.head.appendChild(ga4Script);
-    }
+    // GTM is the single browser-tag entry point. GA4 and Meta events are configured in the container.
+    const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
+    if (!gtmId || document.getElementById("gtm-loader")) return;
 
-    if (process.env.NEXT_PUBLIC_GTM_ID && !document.getElementById("gtm-loader")) {
-      const w = window as Window & { dataLayer?: Record<string, unknown>[] };
-      w.dataLayer = w.dataLayer || [];
-      w.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
-      const script = document.createElement("script");
-      script.id = "gtm-loader";
-      script.async = true;
-      script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(process.env.NEXT_PUBLIC_GTM_ID)}`;
-      document.head.appendChild(script);
-    }
+    const w = window as Window & { dataLayer?: Record<string, unknown>[] };
+    w.dataLayer = w.dataLayer || [];
+    w.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
+    const script = document.createElement("script");
+    script.id = "gtm-loader";
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(gtmId)}`;
+    document.head.appendChild(script);
   }, [consent]);
 
   function chooseProduct(product: Product) {
