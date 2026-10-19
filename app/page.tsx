@@ -73,7 +73,12 @@ export default function Home() {
   const [consent, setConsent] = useState<"unknown" | "accepted" | "rejected">("unknown");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("analytics-consent");
+    let saved: string | null = null;
+    try {
+      saved = window.localStorage.getItem("analytics-consent");
+    } catch {
+      // Keep consent unknown if storage is unavailable; no tags will load by default.
+    }
     if (saved === "accepted" || saved === "rejected") setConsent(saved);
     const params = new URLSearchParams(window.location.search);
     const p = params.get("producto");
@@ -106,7 +111,11 @@ export default function Home() {
   }
 
   function acceptConsent(value: "accepted" | "rejected") {
-    window.localStorage.setItem("analytics-consent", value);
+    try {
+      window.localStorage.setItem("analytics-consent", value);
+    } catch {
+      // Honor the choice for this session even if it cannot be persisted.
+    }
     setConsent(value);
     track("consent_choice", { consent_choice: value });
   }
