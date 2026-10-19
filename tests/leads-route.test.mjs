@@ -84,7 +84,7 @@ test("rejects invalid input before contacting HubSpot", async (t) => {
   assert.equal(fetchMock.mock.callCount(), 0);
 });
 
-test("accepts every HubSpot insurance_product option and omits blank attribution", async (t) => {
+test("accepts only the six PMV products and omits blank attribution", async (t) => {
   const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
   process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
   t.after(() => {
@@ -93,9 +93,9 @@ test("accepts every HubSpot insurance_product option and omits blank attribution
   });
 
   const validProducts = [
-    "auto", "moto", "hogar", "comercio", "bicicletas", "vida",
-    "accidentes_personales", "art", "consorcio", "viajes", "caucion_alquiler"
+    "auto", "moto", "hogar", "consorcio", "bicicletas", "caucion_alquiler"
   ];
+  const unsupportedProducts = ["comercio", "vida", "accidentes_personales", "art", "viajes"];
   const capturedPayloads = [];
   const detailsByProduct = {
     auto: { make: "QA", model: "Test", year: "2024" },
@@ -134,6 +134,26 @@ test("accepts every HubSpot insurance_product option and omits blank attribution
     });
     const response = await POST(request);
     assert.equal(response.status, 201, `product rejected: ${product}`);
+  }
+
+  for (const [index, product] of unsupportedProducts.entries()) {
+    const request = new NextRequest("https://preview.example.test/api/leads", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": `192.0.2.${100 + index}`
+      },
+      body: JSON.stringify({
+        name: "QA Test",
+        email: "qa.test@example.test",
+        phone: "+54 261 555 0101",
+        province: "Mendoza",
+        product,
+        details: {}
+      })
+    });
+    const response = await POST(request);
+    assert.equal(response.status, 400, `unsupported product accepted: ${product}`);
   }
 
   assert.equal(fetchMock.mock.callCount(), validProducts.length);
