@@ -62,6 +62,14 @@ function jsonError(message: string, status: number, headers: Record<string, stri
 }
 
 let rateLimiter: Ratelimit | undefined;
+type RateLimitDecision = { success: boolean; reset: number };
+type RateLimitCheck = (key: string) => Promise<RateLimitDecision>;
+let rateLimitOverrideForTests: RateLimitCheck | undefined;
+
+// Test-only dependency seam; production requests always use the shared Upstash limiter.
+export function __setRateLimitForTests(override: RateLimitCheck | undefined) {
+  rateLimitOverrideForTests = override;
+}
 function getRateLimiter(): Ratelimit {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -78,6 +86,10 @@ function getRateLimiter(): Ratelimit {
   }
   return rateLimiter;
 }
+async function checkRateLimit(key: string): Promise<RateLimitDecision> {
+  if (rateLimitOverrideForTests) return rateLimitOverrideForTests(key);
+  return getRateLimiter().limit(key);
+}
 
 export async function POST(request: NextRequest) {
   // Vercel provides x-real-ip at the platform boundary. Hash it before using it as a Redis key.
@@ -86,10 +98,22 @@ export async function POST(request: NextRequest) {
     || "";
   if (!ip) return jsonError("No pudimos validar el origen de la solicitud.", 400);
 
+  const contentLength = Number(request.headers.get("content-length") || "0");
+  if (contentLength > 16_000) return jsonError("La solicitud es demasiado grande.", 413);
+
+  let raw: unknown;
+  try { raw = await request.json(); } catch { return jsonError("El formato de la solicitud no es válido.", 400); }
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) return jsonError("Revisá los datos obligatorios del formulario.", 400);
+
+  const data = parsed.data;
+  // Reject honeypot submissions before consuming rate-limit quota or contacting the CRM.
+  if (data.website.trim()) return jsonError("No pudimos procesar la solicitud. Revisá los datos e intentá nuevamente.", 400);
+
   const ipHash = createHash("sha256").update(ip).digest("hex").slice(0, 24);
-  let limit: Awaited<ReturnType<Ratelimit["limit"]>>;
+  let limit: RateLimitDecision;
   try {
-    limit = await getRateLimiter().limit(ipHash);
+    limit = await checkRateLimit(ipHash);
   } catch (error) {
     console.error("Distributed rate limiter unavailable", { reason: error instanceof Error ? error.name : "unknown" });
     // Fail closed: do not forward lead submissions to HubSpot when abuse controls are unavailable.
@@ -102,18 +126,6 @@ export async function POST(request: NextRequest) {
 
   const token = process.env.HUBSPOT_ACCESS_TOKEN;
   if (!token) return jsonError("La recepción de solicitudes todavía no está configurada. Intentá más tarde.", 503);
-
-  const contentLength = Number(request.headers.get("content-length") || "0");
-  if (contentLength > 16_000) return jsonError("La solicitud es demasiado grande.", 413);
-
-  let raw: unknown;
-  try { raw = await request.json(); } catch { return jsonError("El formato de la solicitud no es válido.", 400); }
-  const parsed = schema.safeParse(raw);
-  if (!parsed.success) return jsonError("Revisá los datos obligatorios del formulario.", 400);
-
-  const data = parsed.data;
-  // Honeypot: silently reject automated submissions before any CRM request.
-  if (data.website.trim()) return jsonError("No pudimos procesar la solicitud. Revisá los datos e intentá nuevamente.", 400);
   const requestId = `SOL-${randomUUID().slice(0, 8).toUpperCase()}`;
   const phone = data.phone.replace(/[\s().-]/g, "");
   const nameParts = data.name.trim().split(/\s+/);
