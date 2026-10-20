@@ -9,13 +9,13 @@ type FormState = {
   constructionMaterial: string; activity: string; wheelSize: string; bikeMaterial: string;
   insuredAmount: string; monthlyRent: string; contractDuration: string; privacyAccepted: boolean;
 };
-const products: { id: Product; title: string; desc: string; icon: string }[] = [
-  { id: "auto", title: "Autos", desc: "Cobertura para tu auto ante responsabilidad civil, robo, daños o todo riesgo.", icon: "🚘" },
-  { id: "moto", title: "Motos", desc: "Protección para tu moto o ciclomotor con auxilio mecánico y respaldo.", icon: "🏍️" },
-  { id: "hogar", title: "Hogar", desc: "Respaldo ante incendio, robo de contenidos, daños por agua y responsabilidad civil.", icon: "🏡" },
-  { id: "consorcio", title: "Consorcio", desc: "Protección integral para consorcios, administraciones y espacios comunes.", icon: "🏢" },
-  { id: "bicicletas", title: "Bicicleta", desc: "Cuidá tu bicicleta frente a robo en vía pública y accidentes en traslados.", icon: "🚲" },
-  { id: "caucion_alquiler", title: "Caución alquiler", desc: "Garantía de caución para alquilar vivienda o comercio sin avales propietarios.", icon: "🔑" }
+const products: { id: Product; title: string; desc: string; shortDesc: string; icon: string }[] = [
+  { id: "auto", title: "Autos", desc: "Cobertura para tu auto ante responsabilidad civil, robo, daños o todo riesgo.", shortDesc: "Responsabilidad civil, robo y daños.", icon: "🚘" },
+  { id: "moto", title: "Motos", desc: "Protección para tu moto o ciclomotor con auxilio mecánico y respaldo.", shortDesc: "Auxilio mecánico y respaldo.", icon: "🏍️" },
+  { id: "hogar", title: "Hogar", desc: "Respaldo ante incendio, robo de contenidos, daños por agua y responsabilidad civil.", shortDesc: "Incendio, robo y daños en el hogar.", icon: "🏡" },
+  { id: "consorcio", title: "Consorcio", desc: "Protección integral para consorcios, administraciones y espacios comunes.", shortDesc: "Edificios y espacios comunes.", icon: "🏢" },
+  { id: "bicicletas", title: "Bicicleta", desc: "Cuidá tu bicicleta frente a robo en vía pública y accidentes en traslados.", shortDesc: "Robo y accidentes en traslados.", icon: "🚲" },
+  { id: "caucion_alquiler", title: "Caución alquiler", desc: "Garantía de caución para alquilar vivienda o comercio sin avales propietarios.", shortDesc: "Garantía para alquilar vivienda o comercio.", icon: "🔑" }
 ];
 const initialForm: FormState = {
   name: "", email: "", phone: "", province: "", product: "auto", make: "", model: "", year: "",
@@ -186,8 +186,8 @@ export default function Home() {
             <div className="hero-actions"><a className="button" href="#cotizar" onClick={() => track("cta_click", { cta_location: "hero" })}>Solicitar cotización <span aria-hidden="true">→</span></a><a className="secondary" href="#seguros">Ver coberturas</a></div>
             <ul className="trustline trust-list"><li>Atención personalizada</li><li>Gestión directa por WhatsApp</li><li>Productor matriculado</li></ul>
           </div>
-          <div className="hero-card"><div className="hero-card-top"><strong>¿Qué querés asegurar?</strong><p>Elegí una opción para empezar tu cotización.</p></div>
-            <div className="product-grid">{products.map((p) => <button className="product-link" key={p.id} onClick={() => chooseProduct(p.id)} type="button"><span className="product-icon" aria-hidden="true">{p.icon}</span><strong>{p.title}</strong><span>{p.desc}</span></button>)}</div>
+          <div className="hero-card"><div className="hero-card-top"><strong>¿Qué cobertura necesitás?</strong><p>Elegí un seguro y completá los datos básicos para cotizar.</p></div>
+            <div className="product-grid">{products.map((p) => <button className="product-link" key={p.id} onClick={() => chooseProduct(p.id)} type="button"><span className="product-icon" aria-hidden="true">{p.icon}</span><strong>{p.title}</strong><span>{p.shortDesc}</span></button>)}</div>
           </div>
         </div></section>
 
