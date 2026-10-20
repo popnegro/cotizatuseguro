@@ -2,7 +2,8 @@ import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { mock } from "node:test";
 import { NextRequest } from "next/server.js";
-import { POST, __setRateLimitForTests } from "../app/api/leads/route.ts";
+import { POST } from "../app/api/leads/route.ts";
+import { __setRateLimitForTests } from "../app/api/leads/rate-limit.ts";
 
 beforeEach(() => __setRateLimitForTests(async () => ({ success: true, reset: Date.now() + 60_000 })));
 afterEach(() => __setRateLimitForTests(undefined));
