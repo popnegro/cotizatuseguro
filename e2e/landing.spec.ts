@@ -2,10 +2,13 @@ import { expect, test } from '@playwright/test';
 
 test('landing muestra los seis productos del PMV y el formulario', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /tu tranquilidad empieza con una buena cobertura/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /tu tranquilidad empieza con la cobertura adecuada/i })).toBeVisible();
   await expect(page.locator('#cotizar')).toBeVisible();
-  await expect(page.locator('#seguros .product-grid button.product-link')).toHaveCount(6);
+  await expect(page.locator('#seguros .coverage-grid button.coverage-action')).toHaveCount(6);
   await expect(page.locator('#product option')).toHaveCount(6);
+  await expect(page.locator('#aseguradoras .assurance-card')).toHaveCount(4);
+  await expect(page.locator('#faq details.faq')).toHaveCount(6);
+  await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
   await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
 });
 
