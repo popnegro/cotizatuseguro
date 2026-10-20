@@ -50,3 +50,39 @@ test('la pagina de privacidad se abre y contiene informacion de tratamiento', as
   await page.goto('/privacidad');
   await expect(page.locator('body')).toContainText(/privacidad|datos personales|cotización/i);
 });
+
+test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', async ({ page }) => {
+  let leadRequests = 0;
+  await page.route('**/api/leads', async (route) => {
+    leadRequests += 1;
+    const payload = route.request().postDataJSON();
+    expect(payload).toMatchObject({
+      name: 'QA Playwright',
+      email: 'qa.playwright@example.test',
+      product: 'auto',
+      website: '',
+    });
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, requestId: 'SOL-QA123456' }),
+    });
+  });
+  await page.route('https://wa.me/**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'text/html', body: '<title>WhatsApp navigation intercepted by Playwright</title>' });
+  });
+
+  await page.goto('/');
+  await page.getByLabel('Nombre y apellido *').fill('QA Playwright');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.playwright@example.test');
+  await page.getByLabel('Provincia *').fill('Mendoza');
+  await page.getByLabel('Marca *').fill('Toyota');
+  await page.getByLabel('Modelo *').fill('Etios');
+  await page.getByLabel('Año *').fill('2022');
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+  await expect.poll(() => leadRequests).toBe(1);
+  await expect(page).toHaveURL(/https:\/\/wa\.me\/5492610000000\?text=/);
+  expect(new URL(page.url()).searchParams.get('text')).toContain('SOL-QA123456');
+});
