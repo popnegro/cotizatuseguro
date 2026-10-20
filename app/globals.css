@@ -90,3 +90,86 @@ h3{color:var(--navy);margin:0 0 8px;letter-spacing:-.025em}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
 /* Honeypot remains in the DOM for bots but outside the visual and keyboard flow. */
 .honeypot-field{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+
+/* AI Studio reference alignment: blue/navy identity, compact navigation and structured coverage cards. */
+:root{--navy:#102a43;--blue:#1769aa;--sky:#eaf4fb;--ink:#183247;--muted:#617487;--paper:#f7fafc;--line:#dce6ee;--green:#12805c;--green-dark:#0d684c;--lime:#d8f36a;--white:#fff}
+body{background:#fff;color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+.site-header{background:#ffffffed;border-bottom-color:#dce6ee;backdrop-filter:blur(14px)}
+.header-inner{min-height:76px;gap:24px}
+.brand{display:flex;align-items:center;gap:11px;flex-shrink:0;font-size:1rem;letter-spacing:-.025em}
+.brand-mark{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#1769aa,#0d3153);color:#fff;font-size:1.25rem;box-shadow:0 4px 12px #102a4325}
+.brand-copy{display:block}
+.brand small{font-size:.65rem;letter-spacing:.06em;color:#617487;margin-top:4px}
+.main-nav{display:flex;align-items:center;justify-content:center;gap:clamp(14px,2.4vw,34px);flex:1}
+.main-nav a{font-size:.87rem;font-weight:750;color:#42566b;text-decoration:none;transition:color .15s}
+.main-nav a:hover{color:var(--blue)}
+.header-cta,.button{background:var(--green);box-shadow:0 5px 14px #12805c22}
+.header-cta:hover,.button:hover{background:var(--green-dark)}
+.hero{background:radial-gradient(ellipse at 80% 15%,#e6f1fb 0,transparent 38%),linear-gradient(120deg,#f5f9fd 0%,#fff 65%);padding:72px 0 70px}
+.hero:before{border-color:#c5d8e9;box-shadow:0 0 0 30px #dceaf533,0 0 0 60px #dceaf51c}
+.hero-grid{grid-template-columns:1.15fr .85fr;gap:52px}
+.eyebrow{color:#1769aa}
+.eyebrow:before{background:#1769aa}
+h1{font-size:clamp(2.65rem,5vw,4.55rem);line-height:1.04;letter-spacing:-.055em;color:#102a43}
+h2{color:#102a43}
+.lead{color:#4d6278;line-height:1.7}
+.hero-card{transform:none;border-color:#dce6ee;border-radius:24px;padding:24px;box-shadow:0 20px 55px #102a4312}
+.hero-card-top{background:#102a43;border-radius:15px;padding:22px}
+.hero-card-top:after{border-color:#ffffff20;box-shadow:0 0 0 18px #ffffff08,0 0 0 36px #ffffff05}
+.product-link{border-color:#dce6ee;border-radius:14px}
+.product-link:hover{border-color:#8db9de;background:#f5faff;box-shadow:0 8px 18px #1769aa12}
+.product-link strong{color:#102a43}
+#seguros .section-intro{margin-bottom:34px}
+.coverage-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.coverage-card{display:flex;flex-direction:column;align-items:flex-start;min-height:260px;padding:24px;border:1px solid #dce6ee;border-radius:18px;background:#fff;box-shadow:0 8px 24px #102a4307;transition:transform .18s,border-color .18s,box-shadow .18s}
+.coverage-card:hover{transform:translateY(-3px);border-color:#a6c9e4;box-shadow:0 14px 28px #102a4310}
+.coverage-card-top{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-bottom:15px}
+.coverage-card .product-icon{margin:0;font-size:1.55rem}
+.coverage-category{font-size:.68rem;font-weight:900;letter-spacing:.1em;color:#1769aa}
+.coverage-card h3{font-size:1.3rem;margin-bottom:8px}
+.coverage-card p{font-size:.9rem;color:#617487;margin:0 0 22px;line-height:1.65}
+.coverage-action{display:inline-flex;align-items:center;gap:10px;margin-top:auto;padding:0;border:0;background:none;color:#1769aa;font-weight:800;cursor:pointer;text-align:left}
+.coverage-action:hover{color:#0d4777}
+.assurance-section{background:#f5f9fc;border-block:1px solid #e7eef4}
+.assurance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.assurance-card{padding:22px 18px;background:#fff;border:1px solid #dce6ee;border-radius:16px}
+.assurance-card>span{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#eaf4fb;font-size:1.25rem;margin-bottom:16px}
+.assurance-card h3{font-size:1rem}
+.assurance-card p{font-size:.84rem;color:#617487;line-height:1.65;margin-bottom:0}
+.trust-list{list-style:none;display:flex;flex-wrap:wrap;gap:9px 18px;padding:0;margin:26px 0 0}
+.trust-list li{font-size:.84rem;color:#42566b}
+.trust-list li:before{content:"✓";display:inline-grid;place-items:center;width:19px;height:19px;margin-right:7px;border-radius:50%;background:#e5f5ed;color:#12805c;font-size:.75rem;font-weight:900}
+.quote-layout{grid-template-columns:.78fr 1.22fr;gap:32px}
+.quote-aside{background:#102a43;border-radius:20px;top:100px}
+.quote-aside .eyebrow{color:#9dc9f0}
+.quote-aside .eyebrow:before{background:#9dc9f0}
+.quote-card{border-radius:20px;border-color:#dce6ee;box-shadow:0 12px 34px #102a4308}
+.field input,.field select{border-color:#bacbd8;border-radius:10px}
+.field input:focus,.field select:focus{border-color:#1769aa;box-shadow:0 0 0 3px #1769aa18}
+.step{border-color:#dce6ee;border-radius:16px}
+.step-number{background:#eaf4fb;color:#1769aa;border-radius:50%}
+.faq-list{gap:12px}
+.faq{padding:0;border-color:#dce6ee;border-radius:14px;background:#fff}
+.faq summary{position:relative;list-style:none;cursor:pointer;padding:19px 52px 19px 20px;color:#102a43;font-weight:800}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary:after{content:"+";position:absolute;right:19px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#eaf4fb;color:#1769aa;font-size:1.15rem;font-weight:500}
+.faq[open] summary:after{content:"−"}
+.faq p{padding:0 20px 20px;margin:0;color:#617487;font-size:.9rem}
+.faq a{color:#1769aa}
+.site-footer{background:#f2f6f9;border-top:1px solid #e1eaf1;color:#52677c}
+.footer-layout{display:grid;grid-template-columns:1.5fr .8fr .8fr;gap:42px;padding:48px 0 34px}
+.footer-about p{max-width:380px;font-size:.86rem;line-height:1.7}
+.footer-about .ssn-note{font-size:.76rem;color:#718397}
+.footer-column{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:.85rem}
+.footer-column strong{color:#102a43;margin-bottom:4px}
+.footer-column a{text-decoration:none;color:#52677c}
+.footer-column a:hover{color:#1769aa}
+.footer-bottom{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 0;border-top:1px solid #dce6ee;font-size:.78rem}
+.footer-bottom a{color:#52677c}
+.floating-whatsapp{position:fixed;z-index:18;right:22px;bottom:22px;display:inline-flex;align-items:center;gap:9px;padding:14px 19px;border-radius:999px;background:#20c66b;color:#fff;text-decoration:none;font-size:.9rem;font-weight:800;box-shadow:0 8px 26px #0b5e322e;transition:transform .15s,background .15s}
+.floating-whatsapp:hover{background:#17ad59;transform:translateY(-2px)}
+.consent-banner{border-color:#dce6ee;border-radius:16px;box-shadow:0 12px 45px #102a4328}
+.consent-actions .accept{background:#102a43;border-color:#102a43}
+@media(max-width:1080px){.main-nav{gap:14px}.main-nav a{font-size:.78rem}.header-inner{gap:14px}.brand{font-size:.9rem}.brand-mark{width:38px;height:38px}.coverage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.assurance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.main-nav{display:none}.header-inner{min-height:72px}.hero{padding:54px 0}.hero-grid{grid-template-columns:1fr;gap:30px}.hero-card{max-width:640px}.quote-layout{grid-template-columns:1fr;gap:22px}.quote-aside{position:static}.footer-layout{grid-template-columns:1fr 1fr}.footer-about{grid-column:1/-1}}
+@media(max-width:560px){.container{width:calc(100% - 28px)}.brand{font-size:.86rem}.brand small{font-size:.56rem}.brand-mark{width:35px;height:35px}.header-cta{padding:10px 12px;font-size:.75rem}.hero{padding:42px 0 48px}.hero-grid{gap:24px}h1{font-size:clamp(2.45rem,12.4vw,3.55rem)}.hero-card{padding:14px}.hero-card-top{padding:18px}.product-grid{gap:8px}.product-link{padding:13px}.product-link span:last-child{font-size:.75rem}.coverage-grid,.assurance-grid{grid-template-columns:1fr}.coverage-card{min-height:0;padding:20px}.section{padding:54px 0}.quote-card,.quote-aside{padding:20px}.footer-layout{grid-template-columns:1fr;gap:28px;padding:34px 0}.footer-about{grid-column:auto}.floating-whatsapp{right:12px;bottom:12px;padding:12px 15px;font-size:.82rem}.consent-banner{left:10px;right:10px;bottom:76px;padding:16px}.consent-actions{flex-direction:row}.consent-actions button{flex:1;padding:9px 10px;font-size:.8rem}}
