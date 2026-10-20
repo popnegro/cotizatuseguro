@@ -51,7 +51,6 @@ const schema = z.object({
   }
 });
 
-const MAX_REQUESTS_PER_WINDOW = 8;
 
 function jsonError(message: string, status: number, headers: Record<string, string> = {}) {
   return NextResponse.json({ error: message }, {
