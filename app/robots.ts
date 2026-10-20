@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const productionSiteUrl = "https://cotizatuseguro.com.ar";
+const productionSiteUrl = "https://www.cotizatuseguro.com.ar";
 
 export default function robots(): MetadataRoute.Robots {
   return {
