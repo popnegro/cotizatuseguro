@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-const productionSiteUrl = "https://www.cotizatuseguro.com.ar";
+const productionSiteUrl = "https://agustinmontesseguros.com.ar";
 const isProductionDeployment = process.env.VERCEL_ENV === "production";
 
 export const metadata: Metadata = {
