@@ -1,8 +1,11 @@
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { mock } from "node:test";
 import { NextRequest } from "next/server.js";
-import { POST } from "../app/api/leads/route.ts";
+import { POST, __setRateLimitForTests } from "../app/api/leads/route.ts";
+
+beforeEach(() => __setRateLimitForTests(async () => ({ success: true, reset: Date.now() + 60_000 })));
+afterEach(() => __setRateLimitForTests(undefined));
 
 test("creates a lead using HubSpot properties without calling the live CRM", async (t) => {
   const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
@@ -278,5 +281,99 @@ test("rejects honeypot submissions before contacting HubSpot", async (t) => {
 
   const response = await POST(request);
   assert.equal(response.status, 400);
+  assert.equal(fetchMock.mock.callCount(), 0);
+});
+
+
+test("enforces the shared per-IP limit under concurrent submissions and blocks excess requests before HubSpot", async (t) => {
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+  });
+
+  let accepted = 0;
+  __setRateLimitForTests(async () => {
+    accepted += 1;
+    return { success: accepted <= 8, reset: Date.now() + 30_000 };
+  });
+  const fetchMock = mock.method(globalThis, "fetch", async () => new Response(
+    JSON.stringify({ id: "test-contact-id" }),
+    { status: 201, headers: { "Content-Type": "application/json" } }
+  ));
+  t.after(() => fetchMock.mock.restore());
+
+  const requests = Array.from({ length: 12 }, (_, index) => new NextRequest("https://preview.example.test/api/leads", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-real-ip": "192.0.2.200" },
+    body: JSON.stringify({
+      name: "QA Concurrent", email: `qa.concurrent.${index}@example.test`,
+      phone: "+54 261 555 0101", province: "Mendoza", product: "auto",
+      details: { make: "QA", model: "Concurrent", year: "2024" }
+    })
+  }));
+  const responses = await Promise.all(requests.map((request) => POST(request)));
+  assert.equal(responses.filter((response) => response.status === 201).length, 8);
+  const blocked = responses.filter((response) => response.status === 429);
+  assert.equal(blocked.length, 4);
+  assert.ok(Number(blocked[0].headers.get("Retry-After")) >= 1);
+  assert.equal(fetchMock.mock.callCount(), 8);
+});
+
+test("fails closed when Redis rate limiting fails and never contacts HubSpot", async (t) => {
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+  });
+  __setRateLimitForTests(async () => { throw new Error("simulated Redis outage"); });
+  const fetchMock = mock.method(globalThis, "fetch", async () => {
+    throw new Error("HubSpot must not be called when Redis fails");
+  });
+  t.after(() => fetchMock.mock.restore());
+
+  const request = new NextRequest("https://preview.example.test/api/leads", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-real-ip": "192.0.2.201" },
+    body: JSON.stringify({
+      name: "QA Redis", email: "qa.redis@example.test", phone: "+54 261 555 0101",
+      province: "Mendoza", product: "auto", details: { make: "QA", model: "Redis", year: "2024" }
+    })
+  });
+  const response = await POST(request);
+  assert.equal(response.status, 503);
+  assert.equal(fetchMock.mock.callCount(), 0);
+});
+
+test("invalid and honeypot submissions are rejected before rate limiting and HubSpot", async (t) => {
+  let rateLimitCalls = 0;
+  __setRateLimitForTests(async () => {
+    rateLimitCalls += 1;
+    return { success: true, reset: Date.now() + 60_000 };
+  });
+  const fetchMock = mock.method(globalThis, "fetch", async () => {
+    throw new Error("HubSpot must not be called for blocked submissions");
+  });
+  t.after(() => fetchMock.mock.restore());
+
+  const bodies = [
+    { name: "x", email: "invalid", website: "" },
+    {
+      website: "bot-filled", name: "QA Bot", email: "qa.bot@example.test",
+      phone: "+54 261 555 0101", province: "Mendoza", product: "auto",
+      details: { make: "QA", model: "Bot", year: "2024" }
+    }
+  ];
+  for (const body of bodies) {
+    const request = new NextRequest("https://preview.example.test/api/leads", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-real-ip": "192.0.2.202" },
+      body: JSON.stringify(body)
+    });
+    assert.equal((await POST(request)).status, 400);
+  }
+  assert.equal(rateLimitCalls, 0);
   assert.equal(fetchMock.mock.callCount(), 0);
 });
