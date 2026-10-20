@@ -1,8 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server.js";
 import { z } from "zod";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { checkRateLimit } from "./rate-limit.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,36 +60,6 @@ function jsonError(message: string, status: number, headers: Record<string, stri
   });
 }
 
-let rateLimiter: Ratelimit | undefined;
-type RateLimitDecision = { success: boolean; reset: number };
-type RateLimitCheck = (key: string) => Promise<RateLimitDecision>;
-let rateLimitOverrideForTests: RateLimitCheck | undefined;
-
-// Test-only dependency seam; production requests always use the shared Upstash limiter.
-export function __setRateLimitForTests(override: RateLimitCheck | undefined) {
-  rateLimitOverrideForTests = override;
-}
-function getRateLimiter(): Ratelimit {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) throw new Error("Distributed rate limiter is not configured");
-  if (!rateLimiter) {
-    rateLimiter = new Ratelimit({
-      redis: new Redis({ url, token }),
-      limiter: Ratelimit.slidingWindow(MAX_REQUESTS_PER_WINDOW, "60 s"),
-      prefix: "cotizatuseguro:leads",
-      analytics: false,
-      timeout: 1_500,
-      enableProtection: true
-    });
-  }
-  return rateLimiter;
-}
-async function checkRateLimit(key: string): Promise<RateLimitDecision> {
-  if (rateLimitOverrideForTests) return rateLimitOverrideForTests(key);
-  return getRateLimiter().limit(key);
-}
-
 export async function POST(request: NextRequest) {
   // Vercel provides x-real-ip at the platform boundary. Hash it before using it as a Redis key.
   const ip = request.headers.get("x-real-ip")?.trim()
@@ -111,7 +80,7 @@ export async function POST(request: NextRequest) {
   if (data.website.trim()) return jsonError("No pudimos procesar la solicitud. Revisá los datos e intentá nuevamente.", 400);
 
   const ipHash = createHash("sha256").update(ip).digest("hex").slice(0, 24);
-  let limit: RateLimitDecision;
+  let limit: { success: boolean; reset: number };
   try {
     limit = await checkRateLimit(ipHash);
   } catch (error) {
