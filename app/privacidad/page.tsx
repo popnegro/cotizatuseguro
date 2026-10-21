@@ -174,7 +174,7 @@ export default function PrivacyPage() {
         <p><strong>Última actualización:</strong> Octubre de 2026</p>
         <p>
           En CotizaTuSeguro (en adelante, “nosotros”, “nuestro” o “la
-          Plataforma”), accesible a través de https://cotizatuseguro.com.ar/,
+          Plataforma”), accesible a través de https://www.cotizatuseguro.com.ar/,
           nos comprometemos a proteger la privacidad y los datos personales de
           nuestros usuarios. Esta Política de Privacidad describe cómo
           recopilamos, utilizamos, almacenamos, compartimos y protegemos tu
