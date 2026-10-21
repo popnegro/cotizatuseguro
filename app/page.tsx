@@ -23,13 +23,46 @@ const initialForm: FormState = {
   bikeMaterial: "", insuredAmount: "", monthlyRent: "", contractDuration: "", privacyAccepted: false
 };
 
-function track(event: string, params: Record<string, string> = {}) {
-  if (typeof window === "undefined" || window.localStorage.getItem("analytics-consent") !== "accepted") return;
-  const w = window as Window & { dataLayer?: Record<string, unknown>[]; fbq?: (...args: unknown[]) => void };
+function track(event: string, params: Record<string, string> = {}, eventCallback?: () => void) {
+  if (typeof window === "undefined") {
+    eventCallback?.();
+    return;
+  }
+  let consentAccepted = false;
+  try {
+    consentAccepted = window.localStorage.getItem("analytics-consent") === "accepted";
+  } catch {
+    // Storage may be blocked; fail closed for analytics without blocking lead submission.
+  }
+  if (!consentAccepted) {
+    eventCallback?.();
+    return;
+  }
+  const w = window as Window & { dataLayer?: Record<string, unknown>[] };
   w.dataLayer = w.dataLayer || [];
-  w.dataLayer.push({ event, ...params });
-  const mapped: Record<string, string> = { insurance_product_select: "ViewContent", generate_lead: "Lead", whatsapp_click: "Contact" };
-  if (mapped[event] && w.fbq) w.fbq("track", mapped[event], event === "insurance_product_select" ? { content_name: params.insurance_product || "seguro" } : {});
+  w.dataLayer.push({
+    event,
+    ...params,
+    ...(eventCallback ? { eventCallback, eventTimeout: 1200 } : {})
+  });
+}
+
+function trackAndWait(event: string, params: Record<string, string> = {}) {
+  return new Promise<void>((resolve) => {
+    let settled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    }, 1200);
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve();
+    };
+    track(event, params, finish);
+  });
 }
 
 export default function Home() {
@@ -40,7 +73,12 @@ export default function Home() {
   const [consent, setConsent] = useState<"unknown" | "accepted" | "rejected">("unknown");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("analytics-consent");
+    let saved: string | null = null;
+    try {
+      saved = window.localStorage.getItem("analytics-consent");
+    } catch {
+      // Keep consent unknown if storage is unavailable; no tags will load by default.
+    }
     if (saved === "accepted" || saved === "rejected") setConsent(saved);
     const params = new URLSearchParams(window.location.search);
     const p = params.get("producto");
@@ -50,53 +88,20 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (consent === "accepted" && process.env.NEXT_PUBLIC_META_PIXEL_ID && !document.getElementById("meta-pixel-loader")) {
-      const w = window as Window & { fbq?: (...args: unknown[]) => void };
-      if (!w.fbq) {
-        const f = function (...args: unknown[]) { const q = f as typeof f & { queue?: unknown[] }; (q.queue = q.queue || []).push(args); } as (...args: unknown[]) => void;
-        w.fbq = f as unknown as (...args: unknown[]) => void;
-      }
-      w.fbq("init", process.env.NEXT_PUBLIC_META_PIXEL_ID);
-      w.fbq("track", "PageView");
-      const pixel = document.createElement("script");
-      pixel.id = "meta-pixel-loader";
-      pixel.async = true;
-      pixel.src = "https://connect.facebook.net/en_US/fbevents.js";
-      document.head.appendChild(pixel);
-    }
-  }, [consent]);
-
-  useEffect(() => {
     if (consent !== "accepted") return;
 
-    // GA4 direct tag: loaded only after analytics consent.
-    const ga4Id = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
-    if (ga4Id && !document.getElementById("ga4-loader")) {
-      const w = window as Window & {
-        dataLayer?: unknown[];
-        gtag?: (...args: unknown[]) => void;
-      };
-      w.dataLayer = w.dataLayer || [];
-      w.gtag = w.gtag || function (...args: unknown[]) { w.dataLayer?.push(args); };
-      w.gtag("js", new Date());
-      w.gtag("config", ga4Id);
-      const ga4Script = document.createElement("script");
-      ga4Script.id = "ga4-loader";
-      ga4Script.async = true;
-      ga4Script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ga4Id)}`;
-      document.head.appendChild(ga4Script);
-    }
+    // GTM is the single browser-tag entry point. GA4 and Meta events are configured in the container.
+    const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
+    if (!gtmId || document.getElementById("gtm-loader")) return;
 
-    if (process.env.NEXT_PUBLIC_GTM_ID && !document.getElementById("gtm-loader")) {
-      const w = window as Window & { dataLayer?: Record<string, unknown>[] };
-      w.dataLayer = w.dataLayer || [];
-      w.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
-      const script = document.createElement("script");
-      script.id = "gtm-loader";
-      script.async = true;
-      script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(process.env.NEXT_PUBLIC_GTM_ID)}`;
-      document.head.appendChild(script);
-    }
+    const w = window as Window & { dataLayer?: Record<string, unknown>[] };
+    w.dataLayer = w.dataLayer || [];
+    w.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
+    const script = document.createElement("script");
+    script.id = "gtm-loader";
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(gtmId)}`;
+    document.head.appendChild(script);
   }, [consent]);
 
   function chooseProduct(product: Product) {
@@ -106,7 +111,11 @@ export default function Home() {
   }
 
   function acceptConsent(value: "accepted" | "rejected") {
-    window.localStorage.setItem("analytics-consent", value);
+    try {
+      window.localStorage.setItem("analytics-consent", value);
+    } catch {
+      // Honor the choice for this session even if it cannot be persisted.
+    }
     setConsent(value);
     track("consent_choice", { consent_choice: value });
   }
@@ -118,9 +127,11 @@ export default function Home() {
     setBusy(true);
     track("form_submit", { insurance_product: form.product });
     try {
+      const honeypot = new FormData(event.currentTarget).get("website");
       const response = await fetch("/api/leads", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          website: typeof honeypot === "string" ? honeypot : "",
           name: form.name, email: form.email, phone: form.phone, province: form.province,
           city: form.product === "hogar" || form.product === "consorcio" ? form.location : "",
           product: form.product,
@@ -149,7 +160,7 @@ export default function Home() {
       setSuccess("Solicitud registrada. Ahora podés continuar por WhatsApp.");
       const label = products.find((item) => item.id === form.product)?.title || form.product;
       const message = encodeURIComponent(`Hola, quiero solicitar una cotización de seguro para ${label.toLowerCase()}. Mi número de solicitud es ${data.requestId}.`);
-      track("whatsapp_click", { insurance_product: form.product });
+      await trackAndWait("whatsapp_click", { insurance_product: form.product });
       window.location.href = `https://wa.me/${number.replace(/[^0-9]/g, "")}?text=${message}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ocurrió un error inesperado. Intentá nuevamente.");
@@ -168,7 +179,7 @@ export default function Home() {
           <div>
             <span className="eyebrow">Seguros con asesoramiento personalizado</span>
             <h1>Tu tranquilidad empieza con una buena cobertura.</h1>
-            <p className="lead">Encontrá la protección que necesitás para tu vehículo, tu hogar o tu comercio. Contame qué querés asegurar y te ayudo a cotizar.</p>
+            <p className="lead">Encontrá la protección que necesitás para tu vehículo, tu hogar, tu edificio, tu bicicleta o tu alquiler. Contame qué querés asegurar y te ayudo a cotizar.</p>
             <div className="hero-actions"><a className="button" href="#cotizar" onClick={() => track("cta_click", { cta_location: "hero" })}>Quiero cotizar <span aria-hidden="true">→</span></a><a className="secondary" href="#seguros">Ver seguros</a></div>
             <p className="trustline">Asesoramiento personal · Atención por WhatsApp · Mendoza</p>
           </div>
@@ -187,6 +198,7 @@ export default function Home() {
           <div className="quote-card"><h2>¿Qué necesitás asegurar?</h2><p className="help">Los campos con * son obligatorios.</p>
             {error && <div className="form-error" role="alert">{error}</div>}{success && <div className="form-success" role="status">{success}</div>}
             <form onSubmit={submit}>
+              <div aria-hidden="true" className="honeypot-field"><label htmlFor="website">Dejá este campo vacío</label><input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" /></div>
               <div className="form-grid">
                 <div className="field field-full"><label htmlFor="product">Tipo de seguro *</label><select id="product" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value as Product })}>{products.map((p) => <option value={p.id} key={p.id}>{p.title}</option>)}</select></div>
                 <div className="field"><label htmlFor="name">Nombre y apellido *</label><input id="name" name="name" autoComplete="name" required minLength={2} pattern=".*\s+.*" title="Ingresá nombre y apellido" maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>

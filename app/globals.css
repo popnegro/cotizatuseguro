@@ -74,3 +74,6 @@ h3{color:var(--navy);margin:0 0 8px}
 @media(max-width:800px){.hero{padding:50px 0}.hero-grid,.quote-layout{grid-template-columns:1fr;gap:28px}.quote-aside{position:static}.section{padding:54px 0}.steps{grid-template-columns:1fr}.faq-list{grid-template-columns:1fr}.hero-card{max-width:560px}.consent-banner{align-items:flex-start;flex-direction:column}.consent-actions{width:100%}.consent-actions button{flex:1}}
 @media(max-width:520px){.container{width:min(100% - 28px,1120px)}.header-inner{min-height:68px}.header-cta{padding:10px 13px;font-size:.84rem}.brand{font-size:1rem}.brand small{font-size:.65rem}.hero-grid{gap:26px}.hero-card,.quote-card,.quote-aside{padding:20px}.product-grid{gap:9px}.product-link{padding:13px}.form-grid{grid-template-columns:1fr}.field-full{grid-column:auto}.hero-actions .button,.hero-actions .secondary{width:100%}.consent-actions{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
+
+/* Honeypot remains in the DOM for bots but outside the visual and keyboard flow. */
+.honeypot-field{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}

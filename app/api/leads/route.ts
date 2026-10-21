@@ -1,18 +1,20 @@
 import { createHash, randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server.js";
 import { z } from "zod";
+import { checkRateLimit } from "./rate-limit.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const attributionSchema = z.record(z.string(), z.string().max(500)).optional().default({});
 const schema = z.object({
+  website: z.string().max(200).optional().default(""),
   name: z.string().trim().min(2).max(100).refine((value) => value.split(/\s+/).length >= 2, "Ingresá nombre y apellido"),
   email: z.string().trim().email().max(254),
   phone: z.string().trim().min(8).max(30),
   province: z.string().trim().min(2).max(100),
   city: z.string().trim().max(100).optional().default(""),
-  product: z.enum(["auto", "moto", "hogar", "comercio", "bicicletas", "vida", "accidentes_personales", "art", "consorcio", "viajes", "caucion_alquiler"]),
+  product: z.enum(["auto", "moto", "hogar", "consorcio", "bicicletas", "caucion_alquiler"]),
   details: z.record(z.string(), z.string().trim().max(200)).optional().default({}),
   attribution: attributionSchema
 }).superRefine((data, ctx) => {
@@ -49,33 +51,20 @@ const schema = z.object({
   }
 });
 
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-const WINDOW_MS = 60_000;
-const MAX_REQUESTS_PER_WINDOW = 8;
 
-function jsonError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
-}
-
-function rateLimit(key: string) {
-  const now = Date.now();
-  const current = rateBuckets.get(key);
-  if (!current || current.resetAt <= now) {
-    rateBuckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
-  }
-  if (current.count >= MAX_REQUESTS_PER_WINDOW) return false;
-  current.count += 1;
-  return true;
+function jsonError(message: string, status: number, headers: Record<string, string> = {}) {
+  return NextResponse.json({ error: message }, {
+    status,
+    headers: { "Cache-Control": "no-store", ...headers }
+  });
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const ipHash = createHash("sha256").update(ip).digest("hex").slice(0, 24);
-  if (!rateLimit(ipHash)) return jsonError("Demasiadas solicitudes. Esperá un minuto e intentá nuevamente.", 429);
-
-  const token = process.env.HUBSPOT_ACCESS_TOKEN;
-  if (!token) return jsonError("La recepción de solicitudes todavía no está configurada. Intentá más tarde.", 503);
+  // Vercel provides x-real-ip at the platform boundary. Hash it before using it as a Redis key.
+  const ip = request.headers.get("x-real-ip")?.trim()
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || "";
+  if (!ip) return jsonError("No pudimos validar el origen de la solicitud.", 400);
 
   const contentLength = Number(request.headers.get("content-length") || "0");
   if (contentLength > 16_000) return jsonError("La solicitud es demasiado grande.", 413);
@@ -86,6 +75,25 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return jsonError("Revisá los datos obligatorios del formulario.", 400);
 
   const data = parsed.data;
+  // Reject honeypot submissions before consuming rate-limit quota or contacting the CRM.
+  if (data.website.trim()) return jsonError("No pudimos procesar la solicitud. Revisá los datos e intentá nuevamente.", 400);
+
+  const ipHash = createHash("sha256").update(ip).digest("hex").slice(0, 24);
+  let limit: { success: boolean; reset: number };
+  try {
+    limit = await checkRateLimit(ipHash);
+  } catch (error) {
+    console.error("Distributed rate limiter unavailable", { reason: error instanceof Error ? error.name : "unknown" });
+    // Fail closed: do not forward lead submissions to HubSpot when abuse controls are unavailable.
+    return jsonError("La recepción de solicitudes no está disponible temporalmente. Intentá más tarde.", 503);
+  }
+  if (!limit.success) {
+    const retryAfter = Math.max(1, Math.ceil((limit.reset - Date.now()) / 1000));
+    return jsonError("Demasiadas solicitudes. Esperá antes de intentarlo nuevamente.", 429, { "Retry-After": String(retryAfter) });
+  }
+
+  const token = process.env.HUBSPOT_ACCESS_TOKEN;
+  if (!token) return jsonError("La recepción de solicitudes todavía no está configurada. Intentá más tarde.", 503);
   const requestId = `SOL-${randomUUID().slice(0, 8).toUpperCase()}`;
   const phone = data.phone.replace(/[\s().-]/g, "");
   const nameParts = data.name.trim().split(/\s+/);
