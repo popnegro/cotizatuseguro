@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const productionSiteUrl = "https://www.cotizatuseguro.com.ar";
+const productionSiteUrl = "https://cotizatuseguro.com.ar";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
