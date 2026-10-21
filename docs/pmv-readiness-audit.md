@@ -1,8 +1,8 @@
 # PMV readiness audit — Agustín Montes Seguros
 
-Audit date: 2026-10-18
+Audit date: 2026-10-21
 Repository: `popnegro/cotizatuseguro`
-Production/QA URL currently observed: `https://cotizatuseguro.vercel.app/`
+Canonical domain selected by project owner: `https://cotizatuseguro.com.ar/`. The Vercel deployment remains the QA origin until the custom domain is configured and verified.
 
 ## Executive decision
 
@@ -25,7 +25,7 @@ PR #7 is the active draft. Vercel checks must be re-run against the current head
 ### P0 — Block launch
 
 1. **HubSpot live write is unverified.** Unit tests mock `fetch`; they do not prove that the Preview token has the required permissions or that custom properties exist. Submit one clearly labeled fictitious QA lead through an authorized Preview and verify the returned `requestId`/`contactId` and matching contact in the intended HubSpot portal. Do not use real customer data.
-2. **Privacy policy is a draft.** `/privacidad` explicitly says the responsible party, retention period, rights procedure and applicable legal information must be completed. Do not launch paid traffic until the responsible party supplies and approves these details.
+2. **Privacy policy content confirmed by the project owner.** Keep the existing policy text unchanged. This records the owner's confirmation for the PMV and is not an independent legal opinion.
 3. **WhatsApp handoff is unverified.** Confirm the configured number is a WhatsApp Business number and test the prefilled request message on desktop and mobile. A successful CRM write or a click is not proof that the user sent a WhatsApp message.
 4. **Conversion measurement is unverified.** Test accepted/rejected consent, GA4 events, GTM routing and Meta Pixel in browser diagnostics. Prevent duplicate GA4 pageviews and duplicate Meta Lead events if tags are also configured in GTM. Do not activate campaigns until evidence is recorded.
 
@@ -38,7 +38,7 @@ PR #7 is the active draft. Vercel checks must be re-run against the current head
 
 ### P2 — Quality and discoverability
 
-9. Verify canonical and Open Graph metadata against the final custom domain `agustinmontesseguros.com.ar` once configured; current defaults reference the Vercel URL.
+9. Canonical domain is `https://cotizatuseguro.com.ar` (without `www`). Confirm Vercel domain assignment, TLS, redirects from `www` and the Vercel alias, and deployed canonical/Open Graph/robots/sitemap after the SEO fix merges.
 10. Run real desktop/mobile visual QA, keyboard navigation, focus visibility, form error states and accessibility checks.
 11. Run CI (`typecheck`, `test`, `lint`, `build`) on the final candidate and verify the resulting Preview deployment before opening the final approval PR.
 
@@ -50,8 +50,8 @@ PR #7 is the active draft. Vercel checks must be re-run against the current head
 - [ ] WhatsApp handoff verified on desktop and mobile.
 - [ ] Consent rejection blocks analytics/ad tags; acceptance enables only intended tags.
 - [ ] GA4 and Meta events observed once per intended action; no duplicate conversions.
-- [ ] Privacy policy approved and completed by the responsible party.
-- [ ] Final domain, canonical and Open Graph metadata verified.
+- [x] Privacy policy content confirmed by the project owner for the PMV (not an independent legal review).
+- [ ] `cotizatuseguro.com.ar` assigned and verified on Vercel; `www` redirects to apex; deployed canonical, Open Graph, robots and sitemap use apex.
 - [ ] Desktop/mobile, keyboard and error-state QA completed.
 - [ ] CI and Preview pass; no launch-blocking issues remain.
 
@@ -64,4 +64,4 @@ PR #7 is the active draft. Vercel checks must be re-run against the current head
 - **Duplicate conversion rate:** duplicate conversion events / all conversion events; target is zero in QA.
 - **Form completion rate:** successful submissions / form starts.
 
-Campaign spend stays disabled until the P0 gates and the measurement acceptance gates are evidenced.
+Campaign spend stays disabled until the P0 integration gates and measurement acceptance gates are evidenced. Domain metadata code changes alone do not confirm DNS/Vercel ownership, TLS or redirect behavior.
