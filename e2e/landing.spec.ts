@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+declare global {
+  interface Window {
+    __metaCalls?: unknown[][];
+  }
+}
+
 test('landing muestra los seis productos del PMV y el formulario', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /tu tranquilidad empieza con la cobertura adecuada/i })).toBeVisible();
