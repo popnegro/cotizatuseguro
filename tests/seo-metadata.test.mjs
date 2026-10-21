@@ -17,8 +17,8 @@ test("robots and sitemap advertise the same canonical origin", async () => {
   const sitemap = await readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8");
   assert.ok(robots.includes(canonicalOrigin));
   assert.ok(sitemap.includes(canonicalOrigin));
-  assert.match(robots, /sitemap: `\\$\\{productionSiteUrl\\}\\/sitemap\\.xml`/);
-  assert.match(sitemap, /url: `\\$\\{productionSiteUrl\\}\\/privacidad`/);
+  assert.ok(robots.includes("sitemap: `${productionSiteUrl}/sitemap.xml`"));
+  assert.ok(sitemap.includes("`${productionSiteUrl}/privacidad`"));
   assert.doesNotMatch(robots + sitemap, /https:\/\/www\.cotizatuseguro\.com\.ar/);
 });
 
