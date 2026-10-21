@@ -113,14 +113,25 @@ export default function Home() {
     // Meta Pixel: load only after explicit measurement consent.
     const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
     if (metaPixelId && !document.getElementById("meta-pixel-loader")) {
-      const w = window as Window & { fbq?: ((...args: unknown[]) => void) & { queue?: unknown[][] } };
+      type MetaPixelFunction = ((...args: unknown[]) => void) & {
+        callMethod?: (...args: unknown[]) => void;
+        queue: unknown[][];
+        push: (...args: unknown[]) => void;
+        loaded?: boolean;
+        version?: string;
+      };
+      const w = window as Window & { fbq?: MetaPixelFunction; _fbq?: MetaPixelFunction };
       if (!w.fbq) {
-        const fbq = ((...args: unknown[]) => {
-          fbq.queue = fbq.queue || [];
-          fbq.queue.push(args);
-        }) as ((...args: unknown[]) => void) & { queue?: unknown[][] };
+        const fbq = function (...args: unknown[]) {
+          if (fbq.callMethod) fbq.callMethod(...args);
+          else fbq.queue.push(args);
+        } as MetaPixelFunction;
         fbq.queue = [];
+        fbq.push = fbq;
+        fbq.loaded = true;
+        fbq.version = "2.0";
         w.fbq = fbq;
+        w._fbq = fbq;
       }
       w.fbq("init", metaPixelId);
       w.fbq("track", "PageView");
