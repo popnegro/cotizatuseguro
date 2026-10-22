@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server.js";
 import { getDuePendingLeads } from "../lead-store.ts";
 import { deliverStoredLead } from "../delivery.ts";
 
