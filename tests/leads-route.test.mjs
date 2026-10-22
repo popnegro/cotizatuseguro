@@ -4,9 +4,23 @@ import { mock } from "node:test";
 import { NextRequest } from "next/server.js";
 import { POST } from "../app/api/leads/route.ts";
 import { __setRateLimitForTests } from "../app/api/leads/rate-limit.ts";
+import { __setLeadStoreForTests, retryDelayMs } from "../app/api/leads/lead-store.ts";
 
-beforeEach(() => __setRateLimitForTests(async () => ({ success: true, reset: Date.now() + 60_000 })));
-afterEach(() => __setRateLimitForTests(undefined));
+let storedLeads;
+beforeEach(() => {
+  storedLeads = new Map();
+  __setRateLimitForTests(async () => ({ success: true, reset: Date.now() + 60_000 }));
+  __setLeadStoreForTests({
+    persistLead: async (lead) => { storedLeads.set(lead.requestId, structuredClone(lead)); },
+    getLead: async (requestId) => storedLeads.get(requestId) ?? null,
+    updateLead: async (lead) => { storedLeads.set(lead.requestId, structuredClone(lead)); },
+    getDuePendingLeads: async () => [...storedLeads.values()].filter((lead) => lead.status === "pending")
+  });
+});
+afterEach(() => {
+  __setRateLimitForTests(undefined);
+  __setLeadStoreForTests(undefined);
+});
 
 test("creates a lead using HubSpot properties without calling the live CRM", async (t) => {
   const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
@@ -21,6 +35,7 @@ test("creates a lead using HubSpot properties without calling the live CRM", asy
     assert.equal(url, "https://api.hubapi.com/crm/v3/objects/contacts");
     assert.equal(init.method, "POST");
     assert.equal(init.headers.Authorization, "Bearer test-token-never-used");
+    assert.equal(storedLeads.size, 1, "lead must be persisted before contacting HubSpot");
     captured = JSON.parse(init.body);
     return new Response(JSON.stringify({ id: "test-contact-id" }), {
       status: 201,
@@ -204,7 +219,7 @@ test("requires contact email, province, and product-specific details before cont
 });
 
 
-test("maps HubSpot duplicate and transient failures to safe client responses", async (t) => {
+test("keeps HubSpot failures durable and returns a safe pending response", async (t) => {
   const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
   process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
   t.after(() => {
@@ -213,10 +228,10 @@ test("maps HubSpot duplicate and transient failures to safe client responses", a
   });
 
   const cases = [
-    { upstreamStatus: 409, expectedStatus: 409 },
-    { upstreamStatus: 429, expectedStatus: 503 },
-    { upstreamStatus: 500, expectedStatus: 503 },
-    { upstreamStatus: 400, expectedStatus: 502 }
+    { upstreamStatus: 409, expectedStatus: 202 },
+    { upstreamStatus: 429, expectedStatus: 202 },
+    { upstreamStatus: 500, expectedStatus: 202 },
+    { upstreamStatus: 400, expectedStatus: 202 }
   ];
 
   for (const [index, scenario] of cases.entries()) {
@@ -245,7 +260,9 @@ test("maps HubSpot duplicate and transient failures to safe client responses", a
     const response = await POST(request);
     assert.equal(response.status, scenario.expectedStatus);
     const body = await response.json();
-    assert.equal(body.ok, undefined);
+    assert.equal(body.ok, true);
+    assert.equal(body.status, "pending");
+    assert.equal(storedLeads.size, index + 1);
     assert.doesNotMatch(JSON.stringify(body), /sensitive upstream details/);
     assert.equal(fetchMock.mock.callCount(), 1);
     fetchMock.mock.restore();
@@ -377,4 +394,44 @@ test("invalid and honeypot submissions are rejected before rate limiting and Hub
   }
   assert.equal(rateLimitCalls, 0);
   assert.equal(fetchMock.mock.callCount(), 0);
+});
+
+
+test("uses capped exponential backoff for retry scheduling", () => {
+  assert.equal(retryDelayMs(1), 1_000);
+  assert.equal(retryDelayMs(2), 2_000);
+  assert.equal(retryDelayMs(3), 4_000);
+  assert.equal(retryDelayMs(7), 60_000);
+});
+
+test("does not call HubSpot when durable lead persistence fails", async (t) => {
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+  });
+  __setLeadStoreForTests({ persistLead: async () => { throw new Error("Redis unavailable"); } });
+  const fetchMock = mock.method(globalThis, "fetch", async () => {
+    throw new Error("HubSpot must not be called when persistence fails");
+  });
+  t.after(() => fetchMock.mock.restore());
+
+  const request = new NextRequest("https://preview.example.test/api/leads", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.240" },
+    body: JSON.stringify({
+      name: "QA Persistence",
+      email: "qa.persistence@example.test",
+      phone: "+54 261 555 0101",
+      province: "Mendoza",
+      product: "auto",
+      details: { make: "QA", model: "Test", year: "2024" }
+    })
+  });
+
+  const response = await POST(request);
+  assert.equal(response.status, 503);
+  assert.equal(fetchMock.mock.callCount(), 0);
+  assert.match((await response.json()).error, /guardar la solicitud/i);
 });

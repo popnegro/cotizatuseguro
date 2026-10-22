@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: { cpus: 1 },
   async headers() {
     return [{
       source: "/:path*",

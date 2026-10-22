@@ -2,6 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server.js";
 import { z } from "zod";
 import { checkRateLimit } from "./rate-limit.ts";
+import { persistLead, retryDelayMs, type StoredLead } from "./lead-store.ts";
+import { deliverStoredLead } from "./delivery.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,8 +94,6 @@ export async function POST(request: NextRequest) {
     return jsonError("Demasiadas solicitudes. Esperá antes de intentarlo nuevamente.", 429, { "Retry-After": String(retryAfter) });
   }
 
-  const token = process.env.HUBSPOT_ACCESS_TOKEN;
-  if (!token) return jsonError("La recepción de solicitudes todavía no está configurada. Intentá más tarde.", 503);
   const requestId = `SOL-${randomUUID().slice(0, 8).toUpperCase()}`;
   const phone = data.phone.replace(/[\s().-]/g, "");
   const nameParts = data.name.trim().split(/\s+/);
@@ -113,35 +113,55 @@ export async function POST(request: NextRequest) {
   };
   if (lastname) properties.lastname = lastname;
 
-  // HubSpot string properties should be omitted when attribution is absent,
-  // rather than sent as empty strings that can trigger CRM validation errors.
   for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"] as const) {
     const value = data.attribution[key]?.trim();
     if (value) properties[key] = value;
   }
 
-  const endpoint = "https://api.hubapi.com/crm/v3/objects/contacts";
+  const now = Date.now();
+  const lead: StoredLead = {
+    requestId,
+    properties,
+    status: "pending",
+    attempts: 0,
+    nextAttemptAt: now,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  // Durability is a prerequisite: never call HubSpot unless the lead was persisted first.
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ properties }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(8_000)
-    });
-    if (response.status === 409) {
-      return jsonError("Ya existe un registro coincidente. Revisá HubSpot antes de volver a enviarlo.", 409);
-    }
-    if (!response.ok) {
-      const correlation = response.headers.get("x-hubspot-correlation-id") || "unavailable";
-      console.error("HubSpot lead create failed", { status: response.status, correlation, requestId });
-      if (response.status === 429 || response.status >= 500) return jsonError("El CRM no está disponible temporalmente. Intentá nuevamente en unos minutos.", 503);
-      return jsonError("No pudimos registrar la solicitud. La integración del CRM requiere revisión.", 502);
-    }
-    const result = await response.json() as { id?: string };
-    return NextResponse.json({ ok: true, requestId, contactId: result.id }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    await persistLead(lead);
   } catch (error) {
-    console.error("HubSpot lead request failed", { requestId, reason: error instanceof Error ? error.name : "unknown" });
-    return jsonError("No pudimos conectar con el CRM. Intentá nuevamente.", 503);
+    console.error("Lead persistence failed", {
+      requestId,
+      reason: error instanceof Error ? error.name : "unknown"
+    });
+    return jsonError("No pudimos guardar la solicitud de forma segura. Intentá nuevamente más tarde.", 503);
+  }
+
+  try {
+    const delivered = await deliverStoredLead(requestId);
+    if (delivered?.status === "sent") {
+      return NextResponse.json({ ok: true, requestId, contactId: delivered.contactId }, {
+        status: 201,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+
+    // The request is accepted because it is durable; a scheduled retry can process it later.
+    return NextResponse.json({ ok: true, requestId, status: "pending" }, {
+      status: 202,
+      headers: { "Cache-Control": "no-store", "Retry-After": String(Math.max(1, Math.ceil(retryDelayMs(delivered?.attempts ?? 1) / 1000))) }
+    });
+  } catch (error) {
+    console.error("Lead delivery state update failed", {
+      requestId,
+      reason: error instanceof Error ? error.name : "unknown"
+    });
+    return NextResponse.json({ ok: true, requestId, status: "pending" }, {
+      status: 202,
+      headers: { "Cache-Control": "no-store" }
+    });
   }
 }
