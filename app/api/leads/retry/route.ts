@@ -24,12 +24,14 @@ export async function POST(request: NextRequest) {
     const leads = await getDuePendingLeads(25);
     let sent = 0;
     let pending = 0;
+    let failed = 0;
     for (const lead of leads) {
       const result = await deliverStoredLead(lead.requestId);
       if (result?.status === "sent") sent += 1;
+      else if (result?.status === "failed") failed += 1;
       else pending += 1;
     }
-    return NextResponse.json({ ok: true, processed: leads.length, sent, pending }, {
+    return NextResponse.json({ ok: true, processed: leads.length, sent, pending, failed }, {
       headers: { "Cache-Control": "no-store" }
     });
   } catch (error) {
