@@ -219,7 +219,7 @@ test("requires contact email, province, and product-specific details before cont
 });
 
 
-test("keeps HubSpot failures durable and returns a safe pending response", async (t) => {
+test("keeps transient HubSpot failures queued and marks permanent rejections for review", async (t) => {
   const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
   process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
   t.after(() => {
@@ -228,10 +228,10 @@ test("keeps HubSpot failures durable and returns a safe pending response", async
   });
 
   const cases = [
-    { upstreamStatus: 409, expectedStatus: 202 },
-    { upstreamStatus: 429, expectedStatus: 202 },
-    { upstreamStatus: 500, expectedStatus: 202 },
-    { upstreamStatus: 400, expectedStatus: 202 }
+    { upstreamStatus: 409, expectedStatus: 202, leadStatus: "needs_review", storedStatus: "failed" },
+    { upstreamStatus: 429, expectedStatus: 202, leadStatus: "pending", storedStatus: "pending" },
+    { upstreamStatus: 500, expectedStatus: 202, leadStatus: "pending", storedStatus: "pending" },
+    { upstreamStatus: 400, expectedStatus: 202, leadStatus: "needs_review", storedStatus: "failed" }
   ];
 
   for (const [index, scenario] of cases.entries()) {
@@ -261,7 +261,8 @@ test("keeps HubSpot failures durable and returns a safe pending response", async
     assert.equal(response.status, scenario.expectedStatus);
     const body = await response.json();
     assert.equal(body.ok, true);
-    assert.equal(body.status, "pending");
+    assert.equal(body.status, scenario.leadStatus);
+    assert.equal([...storedLeads.values()][index].status, scenario.storedStatus);
     assert.equal(storedLeads.size, index + 1);
     assert.doesNotMatch(JSON.stringify(body), /sensitive upstream details/);
     assert.equal(fetchMock.mock.callCount(), 1);

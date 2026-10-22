@@ -149,6 +149,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // A permanent upstream rejection is retained for manual review, not falsely queued for retry.
+    if (delivered?.status === "failed") {
+      return NextResponse.json({ ok: true, requestId, status: "needs_review" }, {
+        status: 202,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+
     // The request is accepted because it is durable; a scheduled retry can process it later.
     return NextResponse.json({ ok: true, requestId, status: "pending" }, {
       status: 202,

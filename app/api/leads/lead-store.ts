@@ -4,7 +4,7 @@ const LEAD_TTL_SECONDS = 30 * 24 * 60 * 60;
 const LEAD_PREFIX = "cotizatuseguro:lead";
 const PENDING_KEY = "cotizatuseguro:leads:pending";
 
-export type LeadStatus = "pending" | "sent";
+export type LeadStatus = "pending" | "sent" | "failed";
 
 export type StoredLead = {
   requestId: string;
@@ -76,7 +76,7 @@ export async function updateLead(lead: StoredLead): Promise<void> {
   const redis = getRedis();
   const pipeline = redis.pipeline();
   pipeline.set(leadKey(lead.requestId), lead, { ex: LEAD_TTL_SECONDS });
-  if (lead.status === "sent" || lead.nextAttemptAt === Number.MAX_SAFE_INTEGER) {
+  if (lead.status !== "pending") {
     pipeline.zrem(PENDING_KEY, lead.requestId);
   } else {
     pipeline.zadd(PENDING_KEY, { score: lead.nextAttemptAt, member: lead.requestId });

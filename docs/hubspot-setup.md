@@ -2,12 +2,12 @@
 
 ## Variables de entorno
 
-Configurar `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` en Preview y Production para persistencia durable y rate limiting. Configurar `LEAD_RETRY_SECRET` como secreto privado independiente para autorizar el endpoint de reintentos; no incluir su valor en el repositorio ni en URLs. Las solicitudes se conservan hasta 30 días. Programar `POST /api/leads/retry` con `Authorization: Bearer <LEAD_RETRY_SECRET>` y verificar el resultado antes de depender de la recuperación automática.
+Configurar `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` en Preview y Production para persistencia durable y rate limiting. Configurar `LEAD_RETRY_SECRET` como secreto privado independiente para autorizar el endpoint de reintentos; no incluir su valor en el repositorio ni en URLs. Las solicitudes se conservan hasta 30 días. Los errores transitorios (429/5xx, timeout o red) permanecen en la cola `pending`; los rechazos permanentes pasan a `failed` y requieren reconciliación manual. Programar `POST /api/leads/retry` con `Authorization: Bearer <LEAD_RETRY_SECRET>` y verificar el resultado antes de depender de la recuperación automática.
 
 
 Configurar `HUBSPOT_ACCESS_TOKEN` como variable **privada** en Vercel para Preview y Production según corresponda. Nunca usar el prefijo `NEXT_PUBLIC_`, commitear el token ni pegarlo en logs.
 
-Crear una Private App de HubSpot con el permiso mínimo necesario para crear contactos: `crm.objects.contacts.write`. El endpoint usa `POST /crm/v3/objects/contacts`.
+Crear una Private App de HubSpot con el permiso mínimo necesario para crear contactos: `crm.objects.contacts.write`. El endpoint usa `POST /crm/v3/objects/contacts`. Un rechazo 4xx (salvo 429) se considera permanente y no se reintenta automáticamente; revisar en HubSpot los contactos existentes y las propiedades cuando un lead quede en estado `failed`.
 
 ## Propiedades del contacto
 

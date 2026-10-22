@@ -4,11 +4,12 @@ const HUBSPOT_ENDPOINT = "https://api.hubapi.com/crm/v3/objects/contacts";
 
 export type DeliveryResult =
   | { status: "sent"; contactId?: string }
-  | { status: "pending"; errorCode: string; retryable: boolean };
+  | { status: "pending"; errorCode: string; retryable: true }
+  | { status: "failed"; errorCode: string };
 
 export async function deliverLead(lead: StoredLead): Promise<DeliveryResult> {
   const token = process.env.HUBSPOT_ACCESS_TOKEN;
-  if (!token) return { status: "pending", errorCode: "hubspot_not_configured", retryable: false };
+  if (!token) return { status: "failed", errorCode: "hubspot_not_configured" };
 
   try {
     const response = await fetch(HUBSPOT_ENDPOINT, {
@@ -24,11 +25,11 @@ export async function deliverLead(lead: StoredLead): Promise<DeliveryResult> {
       return { status: "sent", contactId: result.id };
     }
 
-    return {
-      status: "pending",
-      errorCode: `hubspot_http_${response.status}`,
-      retryable: response.status === 429 || response.status >= 500
-    };
+    const errorCode = `hubspot_http_${response.status}`;
+    if (response.status === 429 || response.status >= 500) {
+      return { status: "pending", errorCode, retryable: true };
+    }
+    return { status: "failed", errorCode };
   } catch (error) {
     return {
       status: "pending",
@@ -61,9 +62,9 @@ export async function deliverStoredLead(requestId: string): Promise<StoredLead |
   const attempts = lead.attempts + 1;
   const updated: StoredLead = {
     ...lead,
-    status: "pending",
+    status: result.status === "failed" ? "failed" : "pending",
     attempts,
-    nextAttemptAt: result.retryable ? now + Math.min(60_000, 1_000 * 2 ** Math.max(0, attempts - 1)) : Number.MAX_SAFE_INTEGER,
+    nextAttemptAt: result.status === "failed" ? 0 : now + Math.min(60_000, 1_000 * 2 ** Math.max(0, attempts - 1)),
     updatedAt: now,
     lastErrorCode: result.errorCode
   };
