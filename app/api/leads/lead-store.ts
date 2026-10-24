@@ -61,14 +61,44 @@ export async function getLead(requestId: string): Promise<StoredLead | null> {
 export async function getDuePendingLeads(limit = 25): Promise<StoredLead[]> {
   if (storeOverrides?.getDuePendingLeads) return storeOverrides.getDuePendingLeads(limit);
   const redis = getRedis();
-  const ids = await redis.zrange<string[]>(PENDING_KEY, 0, Date.now(), {
-    byScore: true,
-    offset: 0,
-    count: limit
-  });
-  if (!ids.length) return [];
-  const leads = await Promise.all(ids.map((id) => getLead(id)));
-  return leads.filter((lead): lead is StoredLead => lead !== null && lead.status === "pending");
+  const now = Date.now();
+  const scanSize = Math.max(100, limit * 4);
+  const dueLeads: StoredLead[] = [];
+  const staleIds: string[] = [];
+  let offset = 0;
+
+  // Expired leads can leave IDs behind in the sorted-set index. Scan past them
+  // instead of letting stale entries permanently starve valid pending leads.
+  while (dueLeads.length < limit) {
+    const ids = await redis.zrange<string[]>(PENDING_KEY, 0, now, {
+      byScore: true,
+      offset,
+      count: scanSize
+    });
+    if (!ids.length) break;
+
+    const leads = await Promise.all(ids.map((id) => getLead(id)));
+    for (let index = 0; index < ids.length; index += 1) {
+      const lead = leads[index];
+      if (lead?.status === "pending") {
+        dueLeads.push(lead);
+        if (dueLeads.length >= limit) break;
+      } else {
+        staleIds.push(ids[index]);
+      }
+    }
+
+    offset += ids.length;
+    if (ids.length < scanSize) break;
+  }
+
+  if (staleIds.length) {
+    const pipeline = redis.pipeline();
+    for (const id of staleIds) pipeline.zrem(PENDING_KEY, id);
+    await pipeline.exec();
+  }
+
+  return dueLeads;
 }
 
 export async function updateLead(lead: StoredLead): Promise<void> {
