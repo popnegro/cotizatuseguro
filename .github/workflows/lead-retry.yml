@@ -1,0 +1,30 @@
+name: Retry pending lead deliveries
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lead-delivery-retry
+  cancel-in-progress: false
+
+jobs:
+  retry:
+    if: ${{ secrets.LEAD_RETRY_SECRET != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Retry due leads
+        env:
+          LEAD_RETRY_SECRET: ${{ secrets.LEAD_RETRY_SECRET }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --max-time 60 \
+            --header "Authorization: Bearer ${LEAD_RETRY_SECRET}" \
+            "https://cotizatuseguro.com.ar/api/leads/retry"
