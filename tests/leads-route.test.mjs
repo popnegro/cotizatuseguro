@@ -7,14 +7,22 @@ import { __setRateLimitForTests } from "../app/api/leads/rate-limit.ts";
 import { __setLeadStoreForTests, retryDelayMs } from "../app/api/leads/lead-store.ts";
 
 let storedLeads;
+let claimedLeads;
 beforeEach(() => {
   storedLeads = new Map();
+  claimedLeads = new Set();
   __setRateLimitForTests(async () => ({ success: true, reset: Date.now() + 60_000 }));
   __setLeadStoreForTests({
     persistLead: async (lead) => { storedLeads.set(lead.requestId, structuredClone(lead)); },
     getLead: async (requestId) => storedLeads.get(requestId) ?? null,
     updateLead: async (lead) => { storedLeads.set(lead.requestId, structuredClone(lead)); },
-    getDuePendingLeads: async () => [...storedLeads.values()].filter((lead) => lead.status === "pending")
+    getDuePendingLeads: async () => [...storedLeads.values()].filter((lead) => lead.status === "pending"),
+    claimLead: async (requestId) => {
+      if (claimedLeads.has(requestId)) return false;
+      claimedLeads.add(requestId);
+      return true;
+    },
+    releaseLeadClaim: async (requestId) => { claimedLeads.delete(requestId); }
   });
 });
 afterEach(() => {
