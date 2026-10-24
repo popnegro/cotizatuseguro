@@ -1,4 +1,4 @@
-import { getLead, updateLead, type StoredLead } from "./lead-store.ts";
+import { claimLead, getLead, releaseLeadClaim, updateLead, type StoredLead } from "./lead-store.ts";
 
 const HUBSPOT_ENDPOINT = "https://api.hubapi.com/crm/v3/objects/contacts";
 
@@ -40,34 +40,43 @@ export async function deliverLead(lead: StoredLead): Promise<DeliveryResult> {
 }
 
 export async function deliverStoredLead(requestId: string): Promise<StoredLead | null> {
-  const lead = await getLead(requestId);
-  if (!lead || lead.status === "sent") return lead;
+  const claimToken = await claimLead(requestId);
+  // The initial request and scheduled worker can race after persistence. Only the
+  // worker holding the short Redis lease may contact HubSpot for this lead.
+  if (!claimToken) return getLead(requestId);
 
-  const result = await deliverLead(lead);
-  const now = Date.now();
-  if (result.status === "sent") {
+  try {
+    const lead = await getLead(requestId);
+    if (!lead || lead.status !== "pending" || lead.nextAttemptAt > Date.now()) return lead;
+
+    const result = await deliverLead(lead);
+    const now = Date.now();
+    if (result.status === "sent") {
+      const updated: StoredLead = {
+        ...lead,
+        status: "sent",
+        attempts: lead.attempts + 1,
+        nextAttemptAt: 0,
+        updatedAt: now,
+        contactId: result.contactId
+      };
+      delete updated.lastErrorCode;
+      await updateLead(updated);
+      return updated;
+    }
+
+    const attempts = lead.attempts + 1;
     const updated: StoredLead = {
       ...lead,
-      status: "sent",
-      attempts: lead.attempts + 1,
-      nextAttemptAt: 0,
+      status: result.status === "failed" ? "failed" : "pending",
+      attempts,
+      nextAttemptAt: result.status === "failed" ? 0 : now + Math.min(60_000, 1_000 * 2 ** Math.max(0, attempts - 1)),
       updatedAt: now,
-      contactId: result.contactId
+      lastErrorCode: result.errorCode
     };
-    delete updated.lastErrorCode;
     await updateLead(updated);
     return updated;
+  } finally {
+    await releaseLeadClaim(requestId, claimToken);
   }
-
-  const attempts = lead.attempts + 1;
-  const updated: StoredLead = {
-    ...lead,
-    status: result.status === "failed" ? "failed" : "pending",
-    attempts,
-    nextAttemptAt: result.status === "failed" ? 0 : now + Math.min(60_000, 1_000 * 2 ** Math.max(0, attempts - 1)),
-    updatedAt: now,
-    lastErrorCode: result.errorCode
-  };
-  await updateLead(updated);
-  return updated;
 }
