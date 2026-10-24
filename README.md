@@ -27,7 +27,7 @@ Configurar variables reales en `.env.local` para desarrollo y en Vercel para cad
 La API utiliza las propiedades personalizadas de HubSpot `insurance_product`, `insurance_request_id`, `insurance_request_details`, `lead_source`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, `gclid` y `fbclid`. Crear/verificar las propiedades antes de probar el endpoint; HubSpot rechazará propiedades inexistentes.
 
 ## Endpoint
-`POST /api/leads` valida datos y crea el contacto en HubSpot. Si falta la credencial devuelve `503`. Un error no debe interpretarse como lead registrado. El rate limit en memoria es una protección inicial, no distribuida; antes de escalar campañas debe reemplazarse o complementarse con protección de infraestructura y almacenamiento durable/idempotencia.
+`POST /api/leads` valida datos y crea el contacto en HubSpot. Si falta la credencial devuelve `503`. Un error no debe interpretarse como lead registrado. Por defecto, el endpoint usa Upstash Redis para aplicar un límite distribuido. `LEADS_RATE_LIMIT_MODE=infrastructure` omite ese límite de aplicación y solo debe activarse después de configurar y probar reglas de rate limiting en Vercel Firewall para `POST /api/leads`; cambiar la variable por sí solo no activa protección. La recepción en HubSpot no es una cola durable y la idempotencia/reintentos deben verificarse antes de escalar campañas.
 
 ## Estado de integraciones
 Las cuentas y credenciales de HubSpot, WhatsApp Business, GA4, GTM, Meta y Google Ads deben configurarse por separado. Los identificadores publicitarios no se inventan ni se habilitan sin pruebas. El consentimiento actual es una base inicial y requiere QA de etiquetas y revisión legal antes del lanzamiento.
