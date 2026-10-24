@@ -5,6 +5,12 @@ import { checkRateLimit } from "./rate-limit.ts";
 import { persistLead, retryDelayMs, type StoredLead } from "./lead-store.ts";
 import { deliverStoredLead } from "./delivery.ts";
 
+// Infrastructure mode is an explicit opt-in and is safe only after Vercel Firewall
+// rate-limit rules have been configured and verified for POST /api/leads.
+function infrastructureRateLimitEnabled() {
+  return process.env.LEADS_RATE_LIMIT_MODE === "infrastructure";
+}
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -81,17 +87,19 @@ export async function POST(request: NextRequest) {
   if (data.website.trim()) return jsonError("No pudimos procesar la solicitud. Revisá los datos e intentá nuevamente.", 400);
 
   const ipHash = createHash("sha256").update(ip).digest("hex").slice(0, 24);
-  let limit: { success: boolean; reset: number };
-  try {
-    limit = await checkRateLimit(ipHash);
-  } catch (error) {
-    console.error("Distributed rate limiter unavailable", { reason: error instanceof Error ? error.name : "unknown" });
-    // Fail closed: do not forward lead submissions to HubSpot when abuse controls are unavailable.
-    return jsonError("La recepción de solicitudes no está disponible temporalmente. Intentá más tarde.", 503);
-  }
-  if (!limit.success) {
-    const retryAfter = Math.max(1, Math.ceil((limit.reset - Date.now()) / 1000));
-    return jsonError("Demasiadas solicitudes. Esperá antes de intentarlo nuevamente.", 429, { "Retry-After": String(retryAfter) });
+  if (!infrastructureRateLimitEnabled()) {
+    let limit: { success: boolean; reset: number };
+    try {
+      limit = await checkRateLimit(ipHash);
+    } catch (error) {
+      console.error("Distributed rate limiter unavailable", { reason: error instanceof Error ? error.name : "unknown" });
+      // Fail closed unless infrastructure rate limiting was explicitly enabled.
+      return jsonError("La recepción de solicitudes no está disponible temporalmente. Intentá más tarde.", 503);
+    }
+    if (!limit.success) {
+      const retryAfter = Math.max(1, Math.ceil((limit.reset - Date.now()) / 1000));
+      return jsonError("Demasiadas solicitudes. Esperá antes de intentarlo nuevamente.", 429, { "Retry-After": String(retryAfter) });
+    }
   }
 
   const requestId = `SOL-${randomUUID().slice(0, 8).toUpperCase()}`;
