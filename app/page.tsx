@@ -196,7 +196,7 @@ export default function Home() {
         `Provincia: ${form.province.trim()}`,
         ...(detailLines.length ? ["", "DETALLES DEL RIESGO", ...detailLines] : [])
       ];
-      const message = encodeURIComponent(messageLines.join("\\n"));
+      const message = encodeURIComponent(messageLines.join("\n"));
       await trackAndWait("whatsapp_click", { insurance_product: form.product });
       window.location.href = `https://wa.me/${number.replace(/[^0-9]/g, "")}?text=${message}`;
     } catch (err) {
