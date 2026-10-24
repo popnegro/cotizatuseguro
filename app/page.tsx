@@ -159,7 +159,44 @@ export default function Home() {
       }
       setSuccess("Solicitud registrada. Ahora podés continuar por WhatsApp.");
       const label = products.find((item) => item.id === form.product)?.title || form.product;
-      const message = encodeURIComponent(`Hola, quiero solicitar una cotización de seguro para ${label.toLowerCase()}. Mi número de solicitud es ${data.requestId}.`);
+      const detailLabels: Record<string, string> = {
+        make: "Marca", model: "Modelo", year: "Año", homeSqm: "Superficie cubierta (m²)",
+        location: "Ubicación", occupancy: "Tipo de vivienda",
+        constructionMaterial: "Material de construcción", activity: "Actividad",
+        wheelSize: "Rodado", bikeMaterial: "Material de la bicicleta",
+        insuredAmount: "Suma asegurada (ARS)", monthlyRent: "Alquiler mensual (ARS)",
+        contractDuration: "Duración del contrato (meses)"
+      };
+      const detailLines = Object.entries(
+        form.product === "auto" || form.product === "moto"
+          ? { make: form.make, model: form.model, year: form.year }
+          : form.product === "hogar"
+            ? { homeSqm: form.homeSqm, location: form.location, occupancy: form.occupancy }
+            : form.product === "consorcio"
+              ? { homeSqm: form.homeSqm, location: form.location, constructionMaterial: form.constructionMaterial, activity: form.activity }
+              : form.product === "bicicletas"
+                ? { make: form.make, model: form.model, year: form.year, wheelSize: form.wheelSize, bikeMaterial: form.bikeMaterial, insuredAmount: form.insuredAmount }
+                : form.product === "caucion_alquiler"
+                  ? { monthlyRent: form.monthlyRent, contractDuration: form.contractDuration }
+                  : {}
+      )
+        .filter(([, value]) => String(value ?? "").trim() !== "")
+        .map(([key, value]) => `• ${detailLabels[key] || key}: ${value}`);
+      const messageLines = [
+        "Hola, quiero continuar con mi solicitud de cotización de seguro.",
+        "",
+        "DATOS DE LA SOLICITUD",
+        `N.º de solicitud: ${data.requestId}`,
+        `Tipo de seguro: ${label}`,
+        "",
+        "DATOS DEL SOLICITANTE",
+        `Nombre y apellido: ${form.name.trim()}`,
+        `WhatsApp: ${form.phone.trim()}`,
+        `Email: ${form.email.trim()}`,
+        `Provincia: ${form.province.trim()}`,
+        ...(detailLines.length ? ["", "DETALLES DEL RIESGO", ...detailLines] : [])
+      ];
+      const message = encodeURIComponent(messageLines.join("\\n"));
       await trackAndWait("whatsapp_click", { insurance_product: form.product });
       window.location.href = `https://wa.me/${number.replace(/[^0-9]/g, "")}?text=${message}`;
     } catch (err) {
