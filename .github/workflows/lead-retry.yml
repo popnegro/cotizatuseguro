@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   retry:
-    if: ${{ secrets.LEAD_RETRY_SECRET != '' }}
+    if: ${{ vars.LEAD_RETRY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -23,6 +23,10 @@ jobs:
           LEAD_RETRY_SECRET: ${{ secrets.LEAD_RETRY_SECRET }}
         run: |
           set -euo pipefail
+          if [ -z "${LEAD_RETRY_SECRET}" ]; then
+            echo "::error::Configure the repository secret LEAD_RETRY_SECRET before enabling the retry scheduler."
+            exit 1
+          fi
           curl --fail-with-body --silent --show-error \
             --request POST \
             --max-time 60 \
