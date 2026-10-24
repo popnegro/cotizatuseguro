@@ -1,8 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { Redis } from "@upstash/redis";
 
 const LEAD_TTL_SECONDS = 30 * 24 * 60 * 60;
 const LEAD_PREFIX = "cotizatuseguro:lead";
 const PENDING_KEY = "cotizatuseguro:leads:pending";
+const CLAIM_PREFIX = "cotizatuseguro:lead-claim";
+const CLAIM_TTL_MS = 15_000;
 
 export type LeadStatus = "pending" | "sent" | "failed";
 
@@ -24,6 +27,8 @@ type LeadStoreOverrides = {
   getLead?: (requestId: string) => Promise<StoredLead | null>;
   getDuePendingLeads?: (limit?: number) => Promise<StoredLead[]>;
   updateLead?: (lead: StoredLead) => Promise<void>;
+  claimLead?: (requestId: string, token: string) => Promise<boolean>;
+  releaseLeadClaim?: (requestId: string, token: string) => Promise<void>;
 };
 let storeOverrides: LeadStoreOverrides | undefined;
 
@@ -51,6 +56,24 @@ export async function persistLead(lead: StoredLead): Promise<void> {
   pipeline.set(leadKey(lead.requestId), lead, { ex: LEAD_TTL_SECONDS });
   pipeline.zadd(PENDING_KEY, { score: lead.nextAttemptAt, member: lead.requestId });
   await pipeline.exec();
+}
+
+export async function claimLead(requestId: string, token = randomUUID()): Promise<string | null> {
+  if (storeOverrides?.claimLead) {
+    return await storeOverrides.claimLead(requestId, token) ? token : null;
+  }
+  const claimed = await getRedis().set(`${CLAIM_PREFIX}:${requestId}`, token, { nx: true, px: CLAIM_TTL_MS });
+  return claimed === "OK" ? token : null;
+}
+
+export async function releaseLeadClaim(requestId: string, token: string): Promise<void> {
+  if (storeOverrides?.releaseLeadClaim) return storeOverrides.releaseLeadClaim(requestId, token);
+  // Compare-and-delete so an expired lease cannot delete a newer worker's claim.
+  await getRedis().eval(
+    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+    [`${CLAIM_PREFIX}:${requestId}`],
+    [token]
+  );
 }
 
 export async function getLead(requestId: string): Promise<StoredLead | null> {
