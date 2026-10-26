@@ -1,7 +1,6 @@
 import test, { afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
-import { deliverLead, type DeliveryResult } from "../app/api/leads/delivery.ts";
-import type { StoredLead } from "../app/api/leads/lead-store.ts";
+import { deliverLead } from "../app/api/leads/delivery.ts";
 
 const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
 
@@ -11,7 +10,7 @@ afterEach(() => {
   else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
 });
 
-function lead(overrides: Partial<StoredLead> = {}): StoredLead {
+function lead(overrides = {}) {
   const now = Date.now();
   return {
     requestId: "SOL-AB12CD34",
@@ -43,7 +42,7 @@ test("reconciles a contact created before a lost response without creating a dup
     });
   });
 
-  const result: DeliveryResult = await deliverLead(lead());
+  const result = await deliverLead(lead());
   assert.deepEqual(result, { status: "sent", contactId: "existing-contact-42" });
   assert.equal(fetchMock.mock.callCount(), 1, "must not POST a second contact when reconciliation finds one");
 });
