@@ -33,9 +33,13 @@ afterEach(() => {
 test("falls back to Upstash rate limiting when infrastructure mode is not explicitly verified", async (t) => {
   const previousMode = process.env.LEADS_RATE_LIMIT_MODE;
   const previousVerified = process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED;
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
   process.env.LEADS_RATE_LIMIT_MODE = "infrastructure";
   delete process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED;
   t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
     if (previousMode === undefined) delete process.env.LEADS_RATE_LIMIT_MODE;
     else process.env.LEADS_RATE_LIMIT_MODE = previousMode;
     if (previousVerified === undefined) delete process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED;
