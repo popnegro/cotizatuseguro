@@ -30,6 +30,53 @@ afterEach(() => {
   __setLeadStoreForTests(undefined);
 });
 
+test("falls back to Upstash rate limiting when infrastructure mode is not explicitly verified", async (t) => {
+  const previousMode = process.env.LEADS_RATE_LIMIT_MODE;
+  const previousVerified = process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED;
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  process.env.LEADS_RATE_LIMIT_MODE = "infrastructure";
+  delete process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED;
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+    if (previousMode === undefined) delete process.env.LEADS_RATE_LIMIT_MODE;
+    else process.env.LEADS_RATE_LIMIT_MODE = previousMode;
+    if (previousVerified === undefined) delete process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED;
+    else process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED = previousVerified;
+  });
+
+  let rateLimitCalls = 0;
+  __setRateLimitForTests(async () => {
+    rateLimitCalls += 1;
+    return { success: true, reset: Date.now() + 60_000 };
+  });
+
+  const fetchMock = mock.method(globalThis, "fetch", async () => new Response(
+    JSON.stringify({ id: "test-contact-id" }),
+    { status: 201, headers: { "Content-Type": "application/json" } }
+  ));
+  t.after(() => fetchMock.mock.restore());
+
+  const request = new NextRequest("https://preview.example.test/api/leads", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.9" },
+    body: JSON.stringify({
+      name: "QA Integration",
+      email: "qa.integration@example.test",
+      phone: "+54 261 555 0101",
+      province: "Mendoza",
+      city: "Mendoza",
+      product: "auto",
+      details: { make: "QA", model: "Test", year: "2024" }
+    })
+  });
+
+  const response = await POST(request);
+  assert.equal(response.status, 201);
+  assert.equal(rateLimitCalls, 1, "the application limiter must remain active until firewall verification is explicit");
+});
+
 test("creates a lead using HubSpot properties without calling the live CRM", async (t) => {
   const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
   process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";

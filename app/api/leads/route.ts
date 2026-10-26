@@ -5,10 +5,12 @@ import { checkRateLimit } from "./rate-limit.ts";
 import { persistLead, retryDelayMs, type StoredLead } from "./lead-store.ts";
 import { deliverStoredLead } from "./delivery.ts";
 
-// Infrastructure mode is an explicit opt-in and is safe only after Vercel Firewall
-// rate-limit rules have been configured and verified for POST /api/leads.
+// Infrastructure mode is safe only after Vercel Firewall rules for POST /api/leads
+// have been independently verified. Missing the explicit verification flag fails
+// closed to the application-level Upstash limiter.
 function infrastructureRateLimitEnabled() {
-  return process.env.LEADS_RATE_LIMIT_MODE === "infrastructure";
+  return process.env.LEADS_RATE_LIMIT_MODE === "infrastructure"
+    && process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED === "true";
 }
 
 export const runtime = "nodejs";
