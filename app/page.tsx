@@ -146,7 +146,23 @@ export default function Home() {
                   : form.product === "caucion_alquiler"
                     ? { monthlyRent: form.monthlyRent, contractDuration: form.contractDuration }
                     : {},
-          attribution: Object.fromEntries(["utm_source","utm_medium","utm_campaign","utm_content","utm_term","gclid","fbclid"].map((key) => [key, new URLSearchParams(window.location.search).get(key) || ""]))
+          attribution: (() => {
+            const params = new URLSearchParams(window.location.search);
+            const entries: Record<string, string> = {};
+            for (const key of ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","gclid","fbclid"]) {
+              entries[key] = params.get(key) || "";
+            }
+            try {
+              const cookies = document.cookie.split(";").map((c) => c.trim());
+              for (const name of ["_fbp", "_fbc"]) {
+                const found = cookies.find((c) => c.startsWith(name + "="));
+                if (found) entries[name] = decodeURIComponent(found.slice(name.length + 1));
+              }
+            } catch {
+              // Cookie access may be blocked; CAPI still works without fbp/fbc.
+            }
+            return entries;
+          })()
         })
       });
       const data = await response.json();
@@ -254,7 +270,7 @@ export default function Home() {
               <div aria-hidden="true" className="honeypot-field"><label htmlFor="website">Dejá este campo vacío</label><input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" /></div>
               <div className="form-grid">
                 <div className="field field-full"><label htmlFor="product">Tipo de seguro *</label><select id="product" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value as Product })}>{products.map((p) => <option value={p.id} key={p.id}>{p.title}</option>)}</select></div>
-                <div className="field"><label htmlFor="name">Nombre y apellido *</label><input id="name" name="name" autoComplete="name" required minLength={2} pattern=".*\s+.*" title="Ingresá nombre y apellido" maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                <div className="field"><label htmlFor="name">Nombre y apellido *</label><input id="name" name="name" autoComplete="name" required minLength={2} pattern=".*\\s+.*" title="Ingresá nombre y apellido" maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                 <div className="field"><label htmlFor="phone">WhatsApp *</label><input id="phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" required minLength={8} maxLength={30} placeholder="Código de área + número" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
                 <div className="field"><label htmlFor="email">Email *</label><input id="email" name="email" type="email" autoComplete="email" required maxLength={254} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
                 <div className="field"><label htmlFor="province">Provincia *</label><input id="province" name="province" autoComplete="address-level1" required maxLength={100} value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })} /></div>
