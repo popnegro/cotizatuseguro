@@ -128,6 +128,11 @@ export async function POST(request: NextRequest) {
     if (value) properties[key] = value;
   }
 
+  const userAgent = request.headers.get("user-agent")?.trim() || undefined;
+  // Optional browser cookies forwarded by the client for Meta matching (never required).
+  const fbp = typeof data.attribution._fbp === "string" ? data.attribution._fbp.trim() || undefined : undefined;
+  const fbc = typeof data.attribution._fbc === "string" ? data.attribution._fbc.trim() || undefined : undefined;
+
   const now = Date.now();
   const lead: StoredLead = {
     requestId,
@@ -136,7 +141,13 @@ export async function POST(request: NextRequest) {
     attempts: 0,
     nextAttemptAt: now,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    eventContext: {
+      clientIp: ip || undefined,
+      userAgent,
+      fbp,
+      fbc
+    }
   };
 
   // Durability is a prerequisite: never call HubSpot unless the lead was persisted first.
