@@ -1,5 +1,7 @@
 # Configuración de Meta Pixel mediante Google Tag Manager
 
+Updated: 2026-10-27
+
 ## Alcance y seguridad
 
 - Contenedor GTM esperado: `GTM-K2BSJ2W6`.
@@ -15,7 +17,19 @@
 3. En GTM, abre **Preview** y conecta `https://cotizatuseguro.com.ar`. Acepta el consentimiento de medición en la web. Confirma que GTM carga una sola vez.
 4. Revisa las etiquetas existentes antes de crear nuevas; si ya existe un Meta Pixel base, reutilízalo y evita duplicados.
 
-## 2. Etiqueta base del Pixel
+## 2. Variable de capa de datos: Event ID
+
+Crear variable **Variable de capa de datos** (Data Layer Variable):
+
+| Campo | Valor |
+|-------|-------|
+| Nombre | `DLV - event_id` |
+| Nombre de la variable de capa de datos | `event_id` |
+| Versión de la capa de datos | Versión 2 |
+
+La app emite `event_id` en el dataLayer junto con `generate_lead` (es el `requestId` del lead, ej. `SOL-AB12CD34`).
+
+## 3. Etiqueta base del Pixel
 
 Crear una etiqueta **HTML personalizado** llamada `META - Pixel Base`, con activador **All Pages / Todas las páginas**:
 
@@ -40,25 +54,32 @@ fbq('track','PageView');
 </script>
 ```
 
-El activador debe respetar el consentimiento: dado que GTM se inserta tras aceptar medición, no agregues una instalación alternativa que eluda ese flujo. Si la configuración de consentimiento de GTM ya existe, comprueba que la etiqueta también requiere el consentimiento de publicidad/marketing adecuado para la jurisdicción y la política del sitio.
+El activador debe respetar el consentimiento: dado que GTM se inserta tras aceptar medición, no agregues una instalación alternativa que eluda ese flujo.
 
-## 3. Evento Lead
+## 4. Evento Lead (con eventID para deduplicar CAPI)
 
 Crear etiqueta HTML personalizado `META - Lead`:
 
 ```html
 <script>
 if (typeof fbq === 'function') {
-  fbq('track','Lead');
+  var eid = {{DLV - event_id}};
+  if (eid) {
+    fbq('track', 'Lead', {}, { eventID: String(eid) });
+  } else {
+    fbq('track', 'Lead');
+  }
 }
 </script>
 ```
 
 Activador: **Evento personalizado**, nombre exacto `generate_lead`.
 
-La aplicación emite `generate_lead` después de que `POST /api/leads` devuelve una respuesta OK. No lo actives con el clic del botón de envío: eso contaría intentos fallidos. Durante QA, verifica que un lead de prueba exitoso produzca un solo evento.
+> El mismo `event_id` lo envía el servidor vía Conversions API. Meta deduplica Pixel + CAPI cuando coinciden `event_name` + `event_id`.
 
-## 4. Evento Contact para clic a WhatsApp
+La aplicación emite `generate_lead` después de que `POST /api/leads` devuelve una respuesta OK. No lo actives con el clic del botón de envío.
+
+## 5. Evento Contact para clic a WhatsApp
 
 Crear etiqueta HTML personalizado `META - Contact`:
 
@@ -72,26 +93,27 @@ if (typeof fbq === 'function') {
 
 Activador: **Evento personalizado**, nombre exacto `whatsapp_click`.
 
-Esto mide el clic que inicia la apertura de WhatsApp; no demuestra que se haya enviado un mensaje ni que se haya iniciado una conversación.
+Esto mide el clic que inicia la apertura de WhatsApp; no demuestra que se haya enviado un mensaje.
 
-## 5. Orden y duplicación
+## 6. Orden y duplicación
 
 - Mantén una única etiqueta base de Pixel.
 - No agregues `PageView` a las etiquetas de `Lead` o `Contact`.
-- Si GTM permite configurar secuenciación de etiquetas en este contenedor, configura la base como etiqueta de configuración previa para las etiquetas de evento, y valida el resultado en Preview. No publiques si el orden no está confirmado.
-- No envíes el `event_id` como sustituto de deduplicación. La deduplicación entre Pixel y Conversions API requiere enviar el mismo identificador de evento por ambos canales y confirmar la configuración del servidor; no se presupone que exista.
-- No habilites Advanced Matching ni envíes parámetros de usuario sin una revisión explícita de consentimiento, base legal y privacidad.
+- Si GTM permite secuenciación, configura la base como etiqueta previa de las de evento.
+- No habilites Advanced Matching ni envíes parámetros de usuario sin revisión de privacidad.
 
-## 6. Prueba antes de publicar
+## 7. Prueba antes de publicar (checklist mínimo)
 
-1. En GTM Preview, rechaza el consentimiento y confirma que el Pixel no se dispara.
-2. En otra sesión limpia, acepta el consentimiento y confirma que `META - Pixel Base` se ejecuta una sola vez.
-3. En Meta Events Manager, abre **Test Events** y verifica un `PageView`.
-4. Envía un lead de prueba y verifica un único `Lead` después de una respuesta exitosa de la API.
-5. Haz clic en WhatsApp y verifica un `Contact`.
-6. Revisa consola y Network para detectar errores y cargas duplicadas.
-7. Publica el contenedor solo tras completar las pruebas y revisar la política de privacidad.
+1. GTM Preview → rechazar consentimiento → Pixel no dispara.
+2. Aceptar consentimiento → `META - Pixel Base` una sola vez.
+3. Meta Test Events → `PageView`.
+4. Lead de prueba exitoso → un solo `Lead` con `event_id` = requestId.
+5. Si CAPI está activa: el mismo `Lead` aparece deduplicado (no dos conversiones).
+6. Clic WhatsApp → `Contact`.
+7. Publicar contenedor solo tras completar las pruebas.
 
 ## Limitación de verificación
 
-No se ha inspeccionado el contenedor real de GTM ni el panel de Meta desde esta tarea. La existencia de etiquetas, los activadores, el consentimiento y la recepción de eventos deben comprobarse en Preview y Events Manager; este documento no afirma que ya estén activos.
+No se ha inspeccionado el contenedor real de GTM ni el panel de Meta desde esta tarea. La existencia de etiquetas, los activadores, el consentimiento y la recepción de eventos deben comprobarse en Preview y Events Manager.
+
+Paquete corto para copiar/pegar: `docs/gtm-copy-paste.md`.
