@@ -1,4 +1,5 @@
 import { claimLead, getLead, releaseLeadClaim, updateLead, type StoredLead } from "./lead-store.ts";
+import { sendMetaLeadEventSafe } from "./meta-capi.ts";
 
 const HUBSPOT_ENDPOINT = "https://api.hubapi.com/crm/v3/objects/contacts";
 const HUBSPOT_SEARCH_ENDPOINT = "https://api.hubapi.com/crm/v3/objects/contacts/search";
@@ -118,6 +119,21 @@ export async function deliverStoredLead(requestId: string): Promise<StoredLead |
       };
       delete updated.lastErrorCode;
       await updateLead(updated);
+      // Meta CAPI is best-effort: never fail or delay the lead path if Meta is down.
+      try {
+        const meta = await sendMetaLeadEventSafe(updated);
+        if (meta.status === "failed") {
+          console.error("Meta CAPI lead event failed", {
+            requestId: updated.requestId,
+            reason: meta.reason
+          });
+        }
+      } catch (error) {
+        console.error("Meta CAPI lead event threw", {
+          requestId: updated.requestId,
+          reason: error instanceof Error ? error.name : "unknown"
+        });
+      }
       return updated;
     }
 
