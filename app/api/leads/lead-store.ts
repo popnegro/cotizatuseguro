@@ -9,6 +9,16 @@ const CLAIM_TTL_MS = 15_000;
 
 export type LeadStatus = "pending" | "sent" | "failed";
 
+export type LeadEventContext = {
+  /** Client IP as seen by the edge (for Meta CAPI matching only). */
+  clientIp?: string;
+  userAgent?: string;
+  /** Meta browser pixel cookie (_fbp) when available. */
+  fbp?: string;
+  /** Meta click id cookie (_fbc) when available. */
+  fbc?: string;
+};
+
 export type StoredLead = {
   requestId: string;
   properties: Record<string, string>;
@@ -19,6 +29,8 @@ export type StoredLead = {
   updatedAt: number;
   contactId?: string;
   lastErrorCode?: string;
+  /** Non-PII matching hints for Meta Conversions API. Not sent to HubSpot. */
+  eventContext?: LeadEventContext;
 };
 
 let redisClient: Redis | undefined;
