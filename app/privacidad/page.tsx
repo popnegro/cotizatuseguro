@@ -228,8 +228,19 @@ export default function PrivacyPage() {
               nuestros servicios.
             </p>
 
-            {sections.map((section) => (
-              <section key={section.title} className="legal-section">
+            <nav className="legal-toc" aria-label="Índice de la política de privacidad">
+              <h2>En esta política</h2>
+              <ol>
+                {sections.map((section, index) => (
+                  <li key={section.title}>
+                    <Link href={"#seccion-" + (index + 1)}>{section.title}</Link>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+
+            {sections.map((section, index) => (
+              <section key={section.title} id={"seccion-" + (index + 1)} className="legal-section">
                 <h2>{section.title}</h2>
                 {section.paragraphs.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
