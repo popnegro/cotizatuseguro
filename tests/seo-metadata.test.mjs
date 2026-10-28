@@ -64,7 +64,7 @@ test("homepage content clarifies the quote is not a policy or guaranteed coverag
   assert.match(page, /condiciones de cada póliza/);
   assert.match(page, /¿De qué depende el precio de un seguro\?/);
   assert.match(page, /¿La solicitud garantiza que me otorguen la cobertura\?/);
-  assert.match(page, /Superintendencia de Seguros de la Nación/);
+  assert.doesNotMatch(page, /Superintendencia de Seguros de la Nación|registro oficial de la SSN|matrícula|habilitación profesional/i);
   assert.doesNotMatch(page, /sin avales propietarios|Protección integral para consorcios/);
 });
 
