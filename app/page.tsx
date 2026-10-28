@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 type Product = "auto" | "moto" | "hogar" | "consorcio" | "bicicletas" | "caucion_alquiler";
 type FormState = {
-  name: string; email: string; phone: string; province: string; product: Product;
+  name: string; email: string; phone: string; province: string; city: string; product: Product;
   make: string; model: string; year: string; homeSqm: string; location: string; occupancy: string;
   constructionMaterial: string; activity: string; wheelSize: string; bikeMaterial: string;
   insuredAmount: string; monthlyRent: string; contractDuration: string; privacyAccepted: boolean;
@@ -35,7 +35,7 @@ const provinces = [
   "Santiago del Estero", "Tierra del Fuego", "Tucumán"
 ];
 const initialForm: FormState = {
-  name: "", email: "", phone: "", province: "", product: "auto", make: "", model: "", year: "",
+  name: "", email: "", phone: "", province: "", city: "", product: "auto", make: "", model: "", year: "",
   homeSqm: "", location: "", occupancy: "", constructionMaterial: "", activity: "", wheelSize: "",
   bikeMaterial: "", insuredAmount: "", monthlyRent: "", contractDuration: "", privacyAccepted: false
 };
@@ -209,8 +209,7 @@ export default function Home() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           website: typeof honeypot === "string" ? honeypot : "",
-          name: form.name, email: form.email, phone: form.phone, province: form.province,
-          city: form.product === "hogar" || form.product === "consorcio" ? form.location : "",
+          name: form.name, email: form.email, phone: form.phone, province: form.province, city: form.city.trim(),
           product: form.product,
           details: form.product === "auto" || form.product === "moto"
             ? { make: form.make, model: form.model, year: form.year }
@@ -286,6 +285,7 @@ export default function Home() {
         `WhatsApp: ${form.phone.trim()}`,
         `Email: ${form.email.trim()}`,
         `Provincia: ${form.province.trim()}`,
+        ...(form.city.trim() ? [`Localidad o departamento: ${form.city.trim()}`] : []),
         ...(detailLines.length ? ["", "DETALLES DEL RIESGO", ...detailLines] : [])
       ];
       const message = encodeURIComponent(messageLines.join("\n"));
@@ -408,7 +408,7 @@ export default function Home() {
                   <span className="field-hint" id="phone-hint">Código de área + número, sin 0 ni 15.</span>
                   {fieldErrors.phone && <span className="field-error" id="err-phone">{fieldErrors.phone}</span>}
                 </div>
-                <div className={"field" + (fieldErrors.email ? " has-error" : "")}>
+                <div className={"field field-full" + (fieldErrors.email ? " has-error" : "")}>
                   <label htmlFor="email">Email *</label>
                   <input id="email" name="email" type="email" autoComplete="email" maxLength={254} value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setFieldErrors((prev) => { const n = { ...prev }; delete n.email; return n; }); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? "err-email" : undefined} />
                   {fieldErrors.email && <span className="field-error" id="err-email">{fieldErrors.email}</span>}
@@ -421,13 +421,18 @@ export default function Home() {
                   </select>
                   {fieldErrors.province && <span className="field-error" id="err-province">{fieldErrors.province}</span>}
                 </div>
+                <div className="field">
+                  <label htmlFor="city">Localidad o departamento</label>
+                  <input id="city" name="city" autoComplete="address-level2" maxLength={100} placeholder="Ej. Godoy Cruz" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} aria-describedby="city-hint" />
+                  <span className="field-hint" id="city-hint">Opcional · ayuda a ubicar el riesgo.</span>
+                </div>
               </div>
               )}
 
               {formStep === 2 && (
               <div className="form-grid">
                 <div className="field field-full form-step-summary">
-                  <p><strong>{products.find((p) => p.id === form.product)?.title}</strong> · {form.name} · {form.province}</p>
+                  <p><strong>{products.find((p) => p.id === form.product)?.title}</strong> · {form.name} · {[form.city, form.province].filter(Boolean).join(", ")}</p>
                   <button type="button" className="link-button" onClick={() => setFormStep(1)}>Editar contacto</button>
                 </div>
                 {(form.product === "auto" || form.product === "moto") && <>
