@@ -100,3 +100,47 @@ for (const productCase of productCases) {
     }
   });
 }
+
+
+test("la solicitud conserva atribución UTM y gclid al registrar el lead", async ({ page }) => {
+  let capturedPayload: Record<string, unknown> | null = null;
+  await page.route("**/api/leads", async (route) => {
+    capturedPayload = route.request().postDataJSON();
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, requestId: "SOL-QA123456" }),
+    });
+  });
+  await page.route("https://wa.me/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<title>WhatsApp navigation intercepted by Playwright</title>",
+    });
+  });
+
+  await page.goto("/?utm_source=qa-source&utm_medium=qa-medium&utm_campaign=pmv-regression&utm_content=cta-form&utm_term=seguro-auto&gclid=GCLID-QA-123");
+  await page.locator("#cotizar").scrollIntoViewIfNeeded();
+  await page.getByLabel("Nombre y apellido *").fill("QA Atribución");
+  await page.getByLabel("WhatsApp *").fill("+54 261 555 0101");
+  await page.getByLabel("Email *").fill("qa.attribution@example.test");
+  await page.getByLabel("Provincia *").selectOption("Mendoza");
+  await page.getByRole("button", { name: /^continuar/i }).click();
+  await page.getByLabel("Marca *").fill("Toyota");
+  await page.getByLabel("Modelo *").fill("Corolla");
+  await page.getByLabel("Año *").fill("2022");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: /registrar y continuar por whatsapp/i }).click();
+
+  await expect.poll(() => capturedPayload).not.toBeNull();
+  expect((capturedPayload as { attribution: Record<string, string> }).attribution).toMatchObject({
+    utm_source: "qa-source",
+    utm_medium: "qa-medium",
+    utm_campaign: "pmv-regression",
+    utm_content: "cta-form",
+    utm_term: "seguro-auto",
+    gclid: "GCLID-QA-123",
+  });
+  await expect(page).toHaveURL(/https:\/\/wa\.me\//);
+});
