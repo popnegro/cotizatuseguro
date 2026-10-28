@@ -86,6 +86,35 @@ test('el formulario invalido no intenta enviar leads ni llamar a HubSpot', async
   expect(leadApiCalls).toBe(0);
 });
 
+test('la localidad es obligatoria antes de avanzar al paso 2', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+  await page.getByLabel('Nombre y apellido *').fill('QA Localidad');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.localidad@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByText('Ingresá tu localidad o departamento.')).toBeVisible();
+  await expect(page.locator('#city')).toBeFocused();
+  await page.getByLabel('Localidad o departamento *').fill('Godoy Cruz');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
+});
+
+test('la localidad de un solo caracter no permite avanzar al paso 2', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+  await page.getByLabel('Nombre y apellido *').fill('QA Localidad');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.localidad@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento *').fill('A');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByText('Ingresá una localidad o departamento válido (mínimo 2 caracteres).')).toBeVisible();
+  await expect(page.locator('#city')).toBeFocused();
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toHaveCount(0);
+});
+
 test('la pagina de privacidad se abre y contiene informacion de tratamiento', async ({ page }) => {
   await page.goto('/privacidad');
   await expect(page.locator('body')).toContainText(/privacidad|datos personales|cotización/i);
@@ -97,6 +126,28 @@ test('la pagina de privacidad se abre y contiene informacion de tratamiento', as
   await expect(page.getByRole('link', { name: /solicitar cotización/i }).first()).toBeVisible();
 });
 
+test('el paso 2 bloquea el envío si faltan datos del riesgo', async ({ page }) => {
+  let leadApiCalls = 0;
+  await page.route('**/api/leads', async (route) => {
+    leadApiCalls += 1;
+    await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'blocked in test' }) });
+  });
+
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+  await page.getByLabel('Nombre y apellido *').fill('QA Riesgo');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.riesgo@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento *').fill('Godoy Cruz');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
+  await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+  await expect(page.locator('#make')).toBeFocused();
+  expect(leadApiCalls).toBe(0);
+});
+
 test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', async ({ page }) => {
   let leadRequests = 0;
   await page.route('**/api/leads', async (route) => {
@@ -105,6 +156,8 @@ test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', a
     expect(payload).toMatchObject({
       name: 'QA Playwright',
       email: 'qa.playwright@example.test',
+      province: 'Mendoza',
+      city: 'Godoy Cruz',
       product: 'auto',
       website: '',
     });
@@ -126,6 +179,7 @@ test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', a
   await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
   await page.getByLabel('Email *').fill('qa.playwright@example.test');
   await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento').fill('Godoy Cruz');
   await page.getByRole('button', { name: /^continuar/i }).click();
 
   // Paso 2 — detalle del riesgo + privacidad
@@ -154,9 +208,14 @@ test('el formulario mueve el foco a los errores y anuncia el cambio de paso', as
   await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
   await page.getByLabel('Email *').fill('qa.accessibility@example.test');
   await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento *').fill('Godoy Cruz');
   await page.getByRole('button', { name: /^continuar/i }).click();
 
   await expect(page.locator('#quote-form-title')).toBeFocused();
+  // Complete required risk fields so this assertion isolates privacy-consent validation.
+  await page.getByLabel('Marca *').fill('Fiat');
+  await page.getByLabel('Modelo *').fill('Cronos');
+  await page.getByLabel('Año *').fill('2022');
   await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
   await expect(page.locator('#privacyAccepted')).toBeFocused();
   await expect(page.getByRole('alert').first()).toContainText(/privacidad/i);

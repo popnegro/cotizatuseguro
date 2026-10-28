@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 type Product = "auto" | "moto" | "hogar" | "consorcio" | "bicicletas" | "caucion_alquiler";
 type FormState = {
-  name: string; email: string; phone: string; province: string; product: Product;
+  name: string; email: string; phone: string; province: string; city: string; product: Product;
   make: string; model: string; year: string; homeSqm: string; location: string; occupancy: string;
   constructionMaterial: string; activity: string; wheelSize: string; bikeMaterial: string;
   insuredAmount: string; monthlyRent: string; contractDuration: string; privacyAccepted: boolean;
@@ -35,7 +35,7 @@ const provinces = [
   "Santiago del Estero", "Tierra del Fuego", "Tucumán"
 ];
 const initialForm: FormState = {
-  name: "", email: "", phone: "", province: "", product: "auto", make: "", model: "", year: "",
+  name: "", email: "", phone: "", province: "", city: "", product: "auto", make: "", model: "", year: "",
   homeSqm: "", location: "", occupancy: "", constructionMaterial: "", activity: "", wheelSize: "",
   bikeMaterial: "", insuredAmount: "", monthlyRent: "", contractDuration: "", privacyAccepted: false
 };
@@ -168,8 +168,14 @@ export default function Home() {
     if (!form.province.trim()) {
       errors.province = "Seleccioná tu provincia.";
     }
+    const city = form.city.trim();
+    if (!city) {
+      errors.city = "Ingresá tu localidad o departamento.";
+    } else if (city.length < 2) {
+      errors.city = "Ingresá una localidad o departamento válido (mínimo 2 caracteres).";
+    }
     setFieldErrors(errors);
-    const firstInvalid = ["name", "phone", "email", "province"].find((key) => errors[key]);
+    const firstInvalid = ["name", "phone", "email", "province", "city"].find((key) => errors[key]);
     if (firstInvalid) {
       window.setTimeout(() => document.getElementById(firstInvalid)?.focus(), 0);
     }
@@ -194,6 +200,13 @@ export default function Home() {
       goToStep2();
       return;
     }
+    // The form uses noValidate so step 1 can run custom inline validation.
+    // On step 2, explicitly invoke native constraints (required, type, min/max)
+    // before attempting persistence, avoiding a generic API error for missing details.
+    if (!event.currentTarget.checkValidity()) {
+      event.currentTarget.reportValidity();
+      return;
+    }
     if (!form.privacyAccepted) {
       setFieldErrors((prev) => ({ ...prev, privacy: "Confirmá la política de privacidad." }));
       setError("Leé la información de privacidad y confirmá para continuar.");
@@ -209,8 +222,7 @@ export default function Home() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           website: typeof honeypot === "string" ? honeypot : "",
-          name: form.name, email: form.email, phone: form.phone, province: form.province,
-          city: form.product === "hogar" || form.product === "consorcio" ? form.location : "",
+          name: form.name, email: form.email, phone: form.phone, province: form.province, city: form.city.trim(),
           product: form.product,
           details: form.product === "auto" || form.product === "moto"
             ? { make: form.make, model: form.model, year: form.year }
@@ -286,6 +298,7 @@ export default function Home() {
         `WhatsApp: ${form.phone.trim()}`,
         `Email: ${form.email.trim()}`,
         `Provincia: ${form.province.trim()}`,
+        ...(form.city.trim() ? [`Localidad o departamento: ${form.city.trim()}`] : []),
         ...(detailLines.length ? ["", "DETALLES DEL RIESGO", ...detailLines] : [])
       ];
       const message = encodeURIComponent(messageLines.join("\n"));
@@ -408,7 +421,7 @@ export default function Home() {
                   <span className="field-hint" id="phone-hint">Código de área + número, sin 0 ni 15.</span>
                   {fieldErrors.phone && <span className="field-error" id="err-phone">{fieldErrors.phone}</span>}
                 </div>
-                <div className={"field" + (fieldErrors.email ? " has-error" : "")}>
+                <div className={"field field-full" + (fieldErrors.email ? " has-error" : "")}>
                   <label htmlFor="email">Email *</label>
                   <input id="email" name="email" type="email" autoComplete="email" maxLength={254} value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setFieldErrors((prev) => { const n = { ...prev }; delete n.email; return n; }); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? "err-email" : undefined} />
                   {fieldErrors.email && <span className="field-error" id="err-email">{fieldErrors.email}</span>}
@@ -421,13 +434,19 @@ export default function Home() {
                   </select>
                   {fieldErrors.province && <span className="field-error" id="err-province">{fieldErrors.province}</span>}
                 </div>
+                <div className="field">
+                  <label htmlFor="city">Localidad o departamento *</label>
+                  <input id="city" name="city" autoComplete="address-level2" maxLength={100} placeholder="Ej. Godoy Cruz" value={form.city} onChange={(e) => { setForm({ ...form, city: e.target.value }); setFieldErrors((prev) => { const n = { ...prev }; delete n.city; return n; }); }} aria-invalid={!!fieldErrors.city} aria-describedby={fieldErrors.city ? "err-city" : "city-hint"} />
+                  <span className="field-hint" id="city-hint">Indicá tu localidad o departamento.</span>
+                  {fieldErrors.city && <span className="field-error" id="err-city">{fieldErrors.city}</span>}
+                </div>
               </div>
               )}
 
               {formStep === 2 && (
               <div className="form-grid">
                 <div className="field field-full form-step-summary">
-                  <p><strong>{products.find((p) => p.id === form.product)?.title}</strong> · {form.name} · {form.province}</p>
+                  <p><strong>{products.find((p) => p.id === form.product)?.title}</strong> · {form.name} · {[form.city, form.province].filter(Boolean).join(", ")}</p>
                   <button type="button" className="link-button" onClick={() => setFormStep(1)}>Editar contacto</button>
                 </div>
                 {(form.product === "auto" || form.product === "moto") && <>

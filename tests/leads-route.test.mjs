@@ -200,7 +200,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
         email: "qa.test@example.test",
         phone: "+54 261 555 0101",
         province: "Mendoza",
-        city: ["hogar", "consorcio"].includes(product) ? "Mendoza" : "",
+        city: "Godoy Cruz",
         product,
         details: detailsByProduct[product] || {},
         attribution: { utm_source: "  ", utm_medium: "", gclid: "  " }
@@ -221,7 +221,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
         name: "QA Test",
         email: "qa.test@example.test",
         phone: "+54 261 555 0101",
-        province: "Mendoza",
+        province: "Mendoza", city: "Godoy Cruz",
         product,
         details: {}
       })
@@ -236,7 +236,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
     validProducts
   );
   for (const { properties } of capturedPayloads) {
-    assert.equal(properties.city, "Mendoza", "empty city should fall back to province");
+    assert.equal(properties.city, "Godoy Cruz", "locality should be sent to HubSpot");
     assert.equal(properties.lead_source, "direct");
     for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"]) {
       assert.equal(Object.hasOwn(properties, key), false, `unexpected blank attribution property: ${key}`);
@@ -257,9 +257,10 @@ test("requires contact email, province, and product-specific details before cont
   t.after(() => fetchMock.mock.restore());
 
   const incompletePayloads = [
-    { name: "QA Test", phone: "+54 261 555 0101", province: "Mendoza", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
+    { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", province: "Mendoza", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
+    { name: "QA Test", phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
     { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
-    { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", province: "Mendoza", product: "bicicletas", details: { make: "Trek" } }
+    { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "bicicletas", details: { make: "Trek" } }
   ];
   for (const [index, body] of incompletePayloads.entries()) {
     const request = new NextRequest("https://preview.example.test/api/leads", {
@@ -306,7 +307,7 @@ test("keeps transient HubSpot failures queued and marks permanent rejections for
         name: "QA Failure",
         email: `qa.failure.${index}@example.test`,
         phone: "+54 261 555 0101",
-        province: "Mendoza",
+        province: "Mendoza", city: "Godoy Cruz",
         product: "auto",
         details: { make: "QA", model: "Test", year: "2024" }
       })
@@ -347,7 +348,7 @@ test("rejects honeypot submissions before contacting HubSpot", async (t) => {
       name: "QA Bot",
       email: "qa.bot@example.test",
       phone: "+54 261 555 0101",
-      province: "Mendoza",
+      province: "Mendoza", city: "Godoy Cruz",
       product: "auto",
       details: { make: "QA", model: "Test", year: "2024" }
     })
@@ -383,7 +384,7 @@ test("enforces the shared per-IP limit under concurrent submissions and blocks e
     headers: { "content-type": "application/json", "x-real-ip": "192.0.2.200" },
     body: JSON.stringify({
       name: "QA Concurrent", email: `qa.concurrent.${index}@example.test`,
-      phone: "+54 261 555 0101", province: "Mendoza", product: "auto",
+      phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "auto",
       details: { make: "QA", model: "Concurrent", year: "2024" }
     })
   }));
@@ -413,7 +414,7 @@ test("fails closed when Redis rate limiting fails and never contacts HubSpot", a
     headers: { "content-type": "application/json", "x-real-ip": "192.0.2.201" },
     body: JSON.stringify({
       name: "QA Redis", email: "qa.redis@example.test", phone: "+54 261 555 0101",
-      province: "Mendoza", product: "auto", details: { make: "QA", model: "Redis", year: "2024" }
+      province: "Mendoza", city: "Godoy Cruz", product: "auto", details: { make: "QA", model: "Redis", year: "2024" }
     })
   });
   const response = await POST(request);
@@ -436,7 +437,7 @@ test("invalid and honeypot submissions are rejected before rate limiting and Hub
     { name: "x", email: "invalid", website: "" },
     {
       website: "bot-filled", name: "QA Bot", email: "qa.bot@example.test",
-      phone: "+54 261 555 0101", province: "Mendoza", product: "auto",
+      phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "auto",
       details: { make: "QA", model: "Bot", year: "2024" }
     }
   ];
@@ -480,7 +481,7 @@ test("does not call HubSpot when durable lead persistence fails", async (t) => {
       name: "QA Persistence",
       email: "qa.persistence@example.test",
       phone: "+54 261 555 0101",
-      province: "Mendoza",
+      province: "Mendoza", city: "Godoy Cruz",
       product: "auto",
       details: { make: "QA", model: "Test", year: "2024" }
     })
