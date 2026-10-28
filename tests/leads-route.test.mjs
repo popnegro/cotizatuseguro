@@ -200,7 +200,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
         email: "qa.test@example.test",
         phone: "+54 261 555 0101",
         province: "Mendoza",
-        city: ["hogar", "consorcio"].includes(product) ? "Mendoza" : "",
+        city: "Godoy Cruz",
         product,
         details: detailsByProduct[product] || {},
         attribution: { utm_source: "  ", utm_medium: "", gclid: "  " }
