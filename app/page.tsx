@@ -169,6 +169,10 @@ export default function Home() {
       errors.province = "Seleccioná tu provincia.";
     }
     setFieldErrors(errors);
+    const firstInvalid = ["name", "phone", "email", "province"].find((key) => errors[key]);
+    if (firstInvalid) {
+      window.setTimeout(() => document.getElementById(firstInvalid)?.focus(), 0);
+    }
     return Object.keys(errors).length === 0;
   }
 
@@ -179,6 +183,7 @@ export default function Home() {
       return;
     }
     setFormStep(2);
+    window.setTimeout(() => document.getElementById("quote-form-title")?.focus(), 0);
     track("form_step", { form_step: "2", insurance_product: form.product });
   }
 
@@ -192,6 +197,7 @@ export default function Home() {
     if (!form.privacyAccepted) {
       setFieldErrors((prev) => ({ ...prev, privacy: "Confirmá la política de privacidad." }));
       setError("Leé la información de privacidad y confirmá para continuar.");
+      window.setTimeout(() => document.getElementById("privacyAccepted")?.focus(), 0);
       return;
     }
     setFieldErrors({});
@@ -371,13 +377,13 @@ export default function Home() {
           </aside>
           <div className="quote-card">
             <span className="eyebrow">Formulario de cotización</span>
-            <h2>¿Qué necesitás asegurar?</h2>
+            <h2 id="quote-form-title" tabIndex={-1}>¿Qué necesitás asegurar?</h2>
             <div className="form-stepper" aria-label="Progreso del formulario">
               <span className={formStep === 1 ? "step-pill is-active" : "step-pill is-done"}>1. Contacto</span>
               <span className="step-pill-sep" aria-hidden="true">→</span>
               <span className={formStep === 2 ? "step-pill is-active" : "step-pill"}>2. Detalle del riesgo</span>
             </div>
-            <p className="help">{formStep === 1 ? "Paso 1 de 2 · Datos de contacto y tipo de seguro." : "Paso 2 de 2 · Detalle del riesgo y envío."}</p>
+            <p className="help">{formStep === 1 ? "Paso 1 de 2 · Datos de contacto y tipo de seguro. En el siguiente paso completás los detalles del bien a asegurar." : "Paso 2 de 2 · Detalles del riesgo, privacidad y registro. Después podrás continuar por WhatsApp; el mensaje no se envía automáticamente."}</p>
             {error && <div className="form-error" role="alert">{error}</div>}
             {success && <div className="form-success" role="status">{success}</div>}
             <form onSubmit={submit} noValidate>
@@ -394,18 +400,18 @@ export default function Home() {
                 <div className={"field" + (fieldErrors.name ? " has-error" : "")}>
                   <label htmlFor="name">Nombre y apellido *</label>
                   <input id="name" name="name" autoComplete="name" minLength={2} maxLength={100} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setFieldErrors((prev) => { const n = { ...prev }; delete n.name; return n; }); }} aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "err-name" : undefined} />
-                  {fieldErrors.name && <span className="field-error" id="err-name" role="alert">{fieldErrors.name}</span>}
+                  {fieldErrors.name && <span className="field-error" id="err-name">{fieldErrors.name}</span>}
                 </div>
                 <div className={"field" + (fieldErrors.phone ? " has-error" : "")}>
                   <label htmlFor="phone">WhatsApp *</label>
                   <input id="phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" minLength={8} maxLength={30} placeholder="Ej. 261 555 1234" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setFieldErrors((prev) => { const n = { ...prev }; delete n.phone; return n; }); }} aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? "err-phone phone-hint" : "phone-hint"} />
                   <span className="field-hint" id="phone-hint">Código de área + número, sin 0 ni 15.</span>
-                  {fieldErrors.phone && <span className="field-error" id="err-phone" role="alert">{fieldErrors.phone}</span>}
+                  {fieldErrors.phone && <span className="field-error" id="err-phone">{fieldErrors.phone}</span>}
                 </div>
                 <div className={"field" + (fieldErrors.email ? " has-error" : "")}>
                   <label htmlFor="email">Email *</label>
                   <input id="email" name="email" type="email" autoComplete="email" maxLength={254} value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setFieldErrors((prev) => { const n = { ...prev }; delete n.email; return n; }); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? "err-email" : undefined} />
-                  {fieldErrors.email && <span className="field-error" id="err-email" role="alert">{fieldErrors.email}</span>}
+                  {fieldErrors.email && <span className="field-error" id="err-email">{fieldErrors.email}</span>}
                 </div>
                 <div className={"field" + (fieldErrors.province ? " has-error" : "")}>
                   <label htmlFor="province">Provincia *</label>
@@ -413,7 +419,7 @@ export default function Home() {
                     <option value="">Seleccioná tu provincia</option>
                     {provinces.map((prov) => <option key={prov} value={prov}>{prov}</option>)}
                   </select>
-                  {fieldErrors.province && <span className="field-error" id="err-province" role="alert">{fieldErrors.province}</span>}
+                  {fieldErrors.province && <span className="field-error" id="err-province">{fieldErrors.province}</span>}
                 </div>
               </div>
               )}
@@ -454,10 +460,10 @@ export default function Home() {
                 </>}
                 <div className={"field field-full" + (fieldErrors.privacy ? " has-error" : "")}>
                   <label className="consent-row">
-                    <input type="checkbox" checked={form.privacyAccepted} onChange={(e) => { setForm({ ...form, privacyAccepted: e.target.checked }); setFieldErrors((prev) => { const n = { ...prev }; delete n.privacy; return n; }); }} />
+                    <input id="privacyAccepted" type="checkbox" checked={form.privacyAccepted} onChange={(e) => { setForm({ ...form, privacyAccepted: e.target.checked }); setFieldErrors((prev) => { const n = { ...prev }; delete n.privacy; return n; }); }} />
                     <span>Leí la <a href="/privacidad" target="_blank" rel="noreferrer">política de privacidad</a> y solicito que utilicen estos datos para gestionar mi cotización.</span>
                   </label>
-                  {fieldErrors.privacy && <span className="field-error" role="alert">{fieldErrors.privacy}</span>}
+                  {fieldErrors.privacy && <span className="field-error">{fieldErrors.privacy}</span>}
                 </div>
               </div>
               )}

@@ -140,3 +140,24 @@ test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', a
   await expect(page).toHaveURL(/https:\/\/wa\.me\/5492610000000\?text=/);
   expect(new URL(page.url()).searchParams.get('text')).toContain('SOL-QA123456');
 });
+
+
+test('el formulario mueve el foco a los errores y anuncia el cambio de paso', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.locator('#name')).toBeFocused();
+  await expect(page.getByRole('alert').first()).toBeVisible();
+
+  await page.getByLabel('Nombre y apellido *').fill('QA Accesibilidad');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.accessibility@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+
+  await expect(page.locator('#quote-form-title')).toBeFocused();
+  await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+  await expect(page.locator('#privacyAccepted')).toBeFocused();
+  await expect(page.getByRole('alert').first()).toContainText(/privacidad/i);
+});
