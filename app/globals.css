@@ -220,3 +220,62 @@ h2{color:#102a43}
 .form-step-summary p{margin:0;font-size:.88rem;color:var(--ink)}
 .link-button{border:0;background:none;color:#1769aa;font-weight:800;cursor:pointer;padding:0;font-size:.86rem}
 .link-button:hover{text-decoration:underline}
+
+/* P2 — typography, spacing, denser product UI */
+.skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:100}
+.skip-link:focus{left:16px;top:16px;width:auto;height:auto;padding:12px 16px;background:var(--navy);color:#fff;border-radius:10px;font-weight:800;text-decoration:none;outline:3px solid #b0d84d;outline-offset:2px}
+body{font-size:16px;letter-spacing:-.005em}
+.lead{font-size:1.08rem;line-height:1.65;max-width:34em}
+.section{padding:72px 0}
+.section-intro{margin-bottom:28px}
+.section-intro p{font-size:1rem;line-height:1.65;max-width:36em}
+.hero{padding:64px 0 56px}
+.hero-grid{gap:40px}
+.hero-card{padding:16px;border-radius:20px}
+.hero-card-top{padding:18px 18px 16px;margin-bottom:12px;border-radius:14px}
+.hero-card-top strong{font-size:1.05rem}
+.hero-card-top p{font-size:.86rem;margin-top:4px}
+.product-grid{gap:8px}
+.product-link{padding:14px 12px;border-radius:12px}
+.product-link .product-icon{font-size:1.25rem;margin-bottom:6px}
+.product-link strong{font-size:.92rem}
+.product-link span:last-child{font-size:.74rem;line-height:1.35;margin-top:2px}
+.coverage-card{min-height:0;padding:20px;border-radius:16px}
+.coverage-card h3{font-size:1.15rem}
+.coverage-card p{font-size:.88rem;margin-bottom:16px}
+.assurance-card{padding:18px 16px}
+.assurance-card p{font-size:.82rem}
+.company-strip{margin-bottom:22px;gap:8px}
+.company-chip{min-height:40px;padding:8px 14px;font-size:.84rem}
+.quote-card{padding:28px;border-radius:18px}
+.quote-aside{padding:28px;border-radius:18px}
+.form-grid{gap:14px}
+.field label{font-size:.84rem}
+.field input,.field select{min-height:48px;padding:12px 13px;border-radius:10px}
+.form-stepper{margin:10px 0 6px}
+.step-pill{font-size:.74rem;padding:5px 11px}
+.steps{gap:14px;margin-top:24px}
+.step{padding:22px;border-radius:16px}
+.step p{font-size:.9rem;color:var(--muted);margin:0;line-height:1.55}
+.faq summary{padding:16px 48px 16px 18px;font-size:.95rem}
+.faq p{font-size:.88rem;padding:0 18px 16px}
+.footer-layout{padding:40px 0 28px;gap:32px}
+.footer-about p{font-size:.84rem}
+.button,.header-cta{padding:13px 20px}
+.button-wide{min-height:52px;margin-top:8px}
+.privacy-note{margin-top:10px}
+@media(max-width:900px){
+  .section{padding:56px 0}
+  .hero{padding:48px 0 44px}
+}
+@media(max-width:560px){
+  .section{padding:48px 0}
+  .hero{padding:36px 0 40px}
+  .product-link span:last-child{display:none}
+  .product-link{padding:12px 10px;text-align:center}
+  .product-link .product-icon{margin-bottom:4px}
+  .product-link strong{font-size:.86rem}
+  .quote-card,.quote-aside{padding:18px}
+  .form-stepper{gap:6px}
+  .step-pill-sep{display:none}
+}
