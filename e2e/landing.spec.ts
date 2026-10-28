@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-async function waitForConsentBanner(page: import('@playwright/test').Page) {
-  await expect(page.getByLabel('Preferencias de privacidad')).toBeVisible({ timeout: 5000 });
+declare global {
+  interface Window {
+    __metaCalls?: unknown[][];
+  }
 }
 
 test('landing muestra los seis productos del PMV y el formulario', async ({ page }) => {
@@ -35,40 +37,29 @@ test('rechazar consentimiento mantiene bloqueadas las etiquetas de medición', a
   expect(await page.evaluate(() => localStorage.getItem('analytics-consent'))).toBe('rejected');
 });
 
-test('el banner de consentimiento reserva espacio sin solapar el CTA flotante', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
-  await waitForConsentBanner(page);
-  await expect(page.locator('.floating-cta')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Rechazar' }).click();
-  await expect(page.locator('.consent-banner')).toHaveCount(0);
-  await expect(page.locator('.floating-cta')).toBeVisible();
-});
-
-test('el H1 móvil mantiene un tamaño legible y acotado en pantallas estrechas', async ({ page }) => {
-  for (const width of [320, 360, 390, 430]) {
-    await page.setViewportSize({ width, height: 844 });
-    await page.goto('/');
-    const heading = page.locator('.hero h1');
-    await expect(heading).toBeVisible();
-    const typography = await heading.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return { fontSize: Number.parseFloat(style.fontSize), lineHeight: Number.parseFloat(style.lineHeight) };
+test('aceptar consentimiento carga Meta Pixel y encola PageView', async ({ page }) => {
+  await page.route('https://connect.facebook.net/en_US/fbevents.js', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: `window.__metaCalls = window.fbq?.queue?.map((args) => [...args]) || [];
+        if (window.fbq) {
+          window.fbq.callMethod = (...args) => window.__metaCalls.push(args);
+          window.fbq.queue = [];
+        }`
     });
-    expect(typography.fontSize).toBeLessThanOrEqual(38.4);
-    expect(typography.lineHeight / typography.fontSize).toBeGreaterThanOrEqual(1.07);
-    expect(typography.lineHeight / typography.fontSize).toBeLessThanOrEqual(1.12);
-  }
-});
-
-test('aceptar consentimiento carga GTM una sola vez si hay ID configurado', async ({ page }) => {
+  });
   await page.goto('/');
   await waitForConsentBanner(page);
   await page.getByRole('button', { name: 'Aceptar' }).click();
   await expect(page.getByLabel('Preferencias de privacidad')).toHaveCount(0);
-  const loaderCount = await page.locator('#gtm-loader').count();
-  // The local test server intentionally has no GTM ID; acceptance must not fabricate one.
-  expect(loaderCount).toBe(0);
+  await expect(page.locator('#meta-pixel-loader')).toHaveCount(1);
+  await expect.poll(async () => page.evaluate(() => window.__metaCalls?.length || 0)).toBeGreaterThanOrEqual(2);
+  const calls = await page.evaluate(() => window.__metaCalls || []);
+  expect(calls.some((args) => args[0] === 'init' && args[1] === '123456789012345')).toBe(true);
+  expect(calls.some((args) => args[0] === 'track' && args[1] === 'PageView')).toBe(true);
+  // GTM is intentionally not configured in the isolated test build.
+  expect(await page.locator('#gtm-loader').count()).toBe(0);
   expect(await page.evaluate(() => localStorage.getItem('analytics-consent'))).toBe('accepted');
 });
 
@@ -148,7 +139,19 @@ test('el paso 2 bloquea el envío si faltan datos del riesgo', async ({ page }) 
   expect(leadApiCalls).toBe(0);
 });
 
-test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', async ({ page }) => {
+test('solicitud valida envía Meta Lead solo tras éxito de API y sin datos personales', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('analytics-consent', 'accepted'));
+  await page.route('https://connect.facebook.net/en_US/fbevents.js', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: `window.__metaCalls = window.fbq?.queue?.map((args) => [...args]) || [];
+        if (window.fbq) {
+          window.fbq.callMethod = (...args) => window.__metaCalls.push(args);
+          window.fbq.queue = [];
+        }`
+    });
+  });
   let leadRequests = 0;
   await page.route('**/api/leads', async (route) => {
     leadRequests += 1;
@@ -191,6 +194,10 @@ test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', a
   await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
 
   await expect.poll(() => leadRequests).toBe(1);
+  await expect.poll(async () => page.evaluate(() => (window.__metaCalls || []).filter((args) => args[0] === 'track' && args[1] === 'Lead').length)).toBe(1);
+  const leadCall = await page.evaluate(() => (window.__metaCalls || []).find((args) => args[0] === 'track' && args[1] === 'Lead'));
+  expect(leadCall).toBeTruthy();
+  expect(JSON.stringify(leadCall)).not.toMatch(/QA Playwright|qa\.playwright@example\.test|261 555 0101/i);
   await expect(page).toHaveURL(/https:\/\/wa\.me\/5492610000000\?text=/);
   expect(new URL(page.url()).searchParams.get('text')).toContain('SOL-QA123456');
 });

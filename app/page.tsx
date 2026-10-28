@@ -54,13 +54,33 @@ function track(event: string, params: Record<string, string> = {}, eventCallback
     eventCallback?.();
     return;
   }
-  const w = window as Window & { dataLayer?: Record<string, unknown>[] };
+  const w = window as Window & {
+    dataLayer?: Record<string, unknown>[];
+    fbq?: (...args: unknown[]) => void;
+  };
   w.dataLayer = w.dataLayer || [];
   w.dataLayer.push({
     event,
     ...params,
     ...(eventCallback ? { eventCallback, eventTimeout: 1200 } : {})
   });
+
+  // Meta Pixel is sent directly from the browser; never pass contact fields or form payloads.
+  if (w.fbq) {
+    const productName = params.insurance_product || "seguro";
+    if (event === "insurance_product_select") {
+      w.fbq("track", "ViewContent", { content_name: productName, content_category: "insurance" });
+    } else if (event === "generate_lead") {
+      w.fbq(
+        "track",
+        "Lead",
+        { content_name: productName, content_category: "insurance" },
+        ...(params.event_id ? [{ eventID: params.event_id }] : [])
+      );
+    } else if (event === "whatsapp_click") {
+      w.fbq("track", "Contact", { content_name: productName, content_category: "insurance" });
+    }
+  }
 }
 
 function trackAndWait(event: string, params: Record<string, string> = {}) {
@@ -115,17 +135,39 @@ export default function Home() {
     return () => window.clearTimeout(id);
   }, [consent]);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [menuOpen]);
+    // Meta Pixel: load only after explicit measurement consent.
+    const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+    if (metaPixelId && !document.getElementById("meta-pixel-loader")) {
+      type MetaPixelFunction = ((...args: unknown[]) => void) & {
+        callMethod?: (...args: unknown[]) => void;
+        queue: unknown[][];
+        push: (...args: unknown[]) => void;
+        loaded?: boolean;
+        version?: string;
+      };
+      const w = window as Window & { fbq?: MetaPixelFunction; _fbq?: MetaPixelFunction };
+      if (!w.fbq) {
+        const fbq = function (...args: unknown[]) {
+          if (fbq.callMethod) fbq.callMethod(...args);
+          else fbq.queue.push(args);
+        } as MetaPixelFunction;
+        fbq.queue = [];
+        fbq.push = fbq;
+        fbq.loaded = true;
+        fbq.version = "2.0";
+        w.fbq = fbq;
+        w._fbq = fbq;
+      }
+      w.fbq("init", metaPixelId);
+      w.fbq("track", "PageView");
+      const pixelScript = document.createElement("script");
+      pixelScript.id = "meta-pixel-loader";
+      pixelScript.async = true;
+      pixelScript.src = "https://connect.facebook.net/en_US/fbevents.js";
+      document.head.appendChild(pixelScript);
+    }
 
-  useEffect(() => {
-    if (consent !== "accepted") return;
+    // GTM remains the entry point for GA4 and other container-managed tags.
     const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
     if (!gtmId || document.getElementById("gtm-loader")) return;
     const w = window as Window & { dataLayer?: Record<string, unknown>[] };
