@@ -257,6 +257,7 @@ test("requires contact email, province, and product-specific details before cont
   t.after(() => fetchMock.mock.restore());
 
   const incompletePayloads = [
+    { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", province: "Mendoza", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
     { name: "QA Test", phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
     { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
     { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "bicicletas", details: { make: "Trek" } }
