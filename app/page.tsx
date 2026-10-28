@@ -428,7 +428,7 @@ export default function Home() {
                   <label htmlFor="city">Localidad o departamento *</label>
                   <input id="city" name="city" autoComplete="address-level2" maxLength={100} placeholder="Ej. Godoy Cruz" value={form.city} onChange={(e) => { setForm({ ...form, city: e.target.value }); setFieldErrors((prev) => { const n = { ...prev }; delete n.city; return n; }); }} aria-invalid={!!fieldErrors.city} aria-describedby={fieldErrors.city ? "err-city" : "city-hint"} />
                   <span className="field-hint" id="city-hint">Indicá tu localidad o departamento.</span>
-                  {fieldErrors.city && <span className="field-error" id="err-city">{fieldErrors.city}</span>
+                  {fieldErrors.city && <span className="field-error" id="err-city">{fieldErrors.city}</span>}
                 </div>
               </div>
               )}
