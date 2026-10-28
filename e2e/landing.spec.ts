@@ -172,6 +172,7 @@ test('el formulario mueve el foco a los errores y anuncia el cambio de paso', as
   await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
   await page.getByLabel('Email *').fill('qa.accessibility@example.test');
   await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento *').fill('Godoy Cruz');
   await page.getByRole('button', { name: /^continuar/i }).click();
 
   await expect(page.locator('#quote-form-title')).toBeFocused();
