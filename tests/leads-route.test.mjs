@@ -4,9 +4,78 @@ import { mock } from "node:test";
 import { NextRequest } from "next/server.js";
 import { POST } from "../app/api/leads/route.ts";
 import { __setRateLimitForTests } from "../app/api/leads/rate-limit.ts";
+import { __setLeadStoreForTests, retryDelayMs } from "../app/api/leads/lead-store.ts";
 
-beforeEach(() => __setRateLimitForTests(async () => ({ success: true, reset: Date.now() + 60_000 })));
-afterEach(() => __setRateLimitForTests(undefined));
+let storedLeads;
+let claimedLeads;
+beforeEach(() => {
+  storedLeads = new Map();
+  claimedLeads = new Set();
+  __setRateLimitForTests(async () => ({ success: true, reset: Date.now() + 60_000 }));
+  __setLeadStoreForTests({
+    persistLead: async (lead) => { storedLeads.set(lead.requestId, structuredClone(lead)); },
+    getLead: async (requestId) => storedLeads.get(requestId) ?? null,
+    updateLead: async (lead) => { storedLeads.set(lead.requestId, structuredClone(lead)); },
+    getDuePendingLeads: async () => [...storedLeads.values()].filter((lead) => lead.status === "pending"),
+    claimLead: async (requestId) => {
+      if (claimedLeads.has(requestId)) return false;
+      claimedLeads.add(requestId);
+      return true;
+    },
+    releaseLeadClaim: async (requestId) => { claimedLeads.delete(requestId); }
+  });
+});
+afterEach(() => {
+  __setRateLimitForTests(undefined);
+  __setLeadStoreForTests(undefined);
+});
+
+test("falls back to Upstash rate limiting when infrastructure mode is not explicitly verified", async (t) => {
+  const previousMode = process.env.LEADS_RATE_LIMIT_MODE;
+  const previousVerified = process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED;
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  process.env.LEADS_RATE_LIMIT_MODE = "infrastructure";
+  delete process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED;
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+    if (previousMode === undefined) delete process.env.LEADS_RATE_LIMIT_MODE;
+    else process.env.LEADS_RATE_LIMIT_MODE = previousMode;
+    if (previousVerified === undefined) delete process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED;
+    else process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED = previousVerified;
+  });
+
+  let rateLimitCalls = 0;
+  __setRateLimitForTests(async () => {
+    rateLimitCalls += 1;
+    return { success: true, reset: Date.now() + 60_000 };
+  });
+
+  const fetchMock = mock.method(globalThis, "fetch", async () => new Response(
+    JSON.stringify({ id: "test-contact-id" }),
+    { status: 201, headers: { "Content-Type": "application/json" } }
+  ));
+  t.after(() => fetchMock.mock.restore());
+
+  const request = new NextRequest("https://preview.example.test/api/leads", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.9" },
+    body: JSON.stringify({
+      name: "QA Integration",
+      email: "qa.integration@example.test",
+      phone: "+54 261 555 0101",
+      province: "Mendoza",
+      city: "Mendoza",
+      product: "auto",
+      details: { make: "QA", model: "Test", year: "2024" }
+    })
+  });
+
+  const response = await POST(request);
+  assert.equal(response.status, 201);
+  assert.equal(rateLimitCalls, 1, "the application limiter must remain active until firewall verification is explicit");
+});
 
 test("creates a lead using HubSpot properties without calling the live CRM", async (t) => {
   const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
@@ -21,6 +90,7 @@ test("creates a lead using HubSpot properties without calling the live CRM", asy
     assert.equal(url, "https://api.hubapi.com/crm/v3/objects/contacts");
     assert.equal(init.method, "POST");
     assert.equal(init.headers.Authorization, "Bearer test-token-never-used");
+    assert.equal(storedLeads.size, 1, "lead must be persisted before contacting HubSpot");
     captured = JSON.parse(init.body);
     return new Response(JSON.stringify({ id: "test-contact-id" }), {
       status: 201,
@@ -130,7 +200,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
         email: "qa.test@example.test",
         phone: "+54 261 555 0101",
         province: "Mendoza",
-        city: ["hogar", "consorcio"].includes(product) ? "Mendoza" : "",
+        city: "Godoy Cruz",
         product,
         details: detailsByProduct[product] || {},
         attribution: { utm_source: "  ", utm_medium: "", gclid: "  " }
@@ -151,7 +221,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
         name: "QA Test",
         email: "qa.test@example.test",
         phone: "+54 261 555 0101",
-        province: "Mendoza",
+        province: "Mendoza", city: "Godoy Cruz",
         product,
         details: {}
       })
@@ -166,7 +236,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
     validProducts
   );
   for (const { properties } of capturedPayloads) {
-    assert.equal(properties.city, "Mendoza", "empty city should fall back to province");
+    assert.equal(properties.city, "Godoy Cruz", "locality should be sent to HubSpot");
     assert.equal(properties.lead_source, "direct");
     for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"]) {
       assert.equal(Object.hasOwn(properties, key), false, `unexpected blank attribution property: ${key}`);
@@ -187,9 +257,10 @@ test("requires contact email, province, and product-specific details before cont
   t.after(() => fetchMock.mock.restore());
 
   const incompletePayloads = [
-    { name: "QA Test", phone: "+54 261 555 0101", province: "Mendoza", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
+    { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", province: "Mendoza", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
+    { name: "QA Test", phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
     { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", product: "auto", details: { make: "Fiat", model: "Cronos", year: "2022" } },
-    { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", province: "Mendoza", product: "bicicletas", details: { make: "Trek" } }
+    { name: "QA Test", email: "qa@example.test", phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "bicicletas", details: { make: "Trek" } }
   ];
   for (const [index, body] of incompletePayloads.entries()) {
     const request = new NextRequest("https://preview.example.test/api/leads", {
@@ -204,7 +275,7 @@ test("requires contact email, province, and product-specific details before cont
 });
 
 
-test("maps HubSpot duplicate and transient failures to safe client responses", async (t) => {
+test("keeps transient HubSpot failures queued and marks permanent rejections for review", async (t) => {
   const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
   process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
   t.after(() => {
@@ -213,10 +284,10 @@ test("maps HubSpot duplicate and transient failures to safe client responses", a
   });
 
   const cases = [
-    { upstreamStatus: 409, expectedStatus: 409 },
-    { upstreamStatus: 429, expectedStatus: 503 },
-    { upstreamStatus: 500, expectedStatus: 503 },
-    { upstreamStatus: 400, expectedStatus: 502 }
+    { upstreamStatus: 409, expectedStatus: 202, leadStatus: "needs_review", storedStatus: "failed" },
+    { upstreamStatus: 429, expectedStatus: 202, leadStatus: "pending", storedStatus: "pending" },
+    { upstreamStatus: 500, expectedStatus: 202, leadStatus: "pending", storedStatus: "pending" },
+    { upstreamStatus: 400, expectedStatus: 202, leadStatus: "needs_review", storedStatus: "failed" }
   ];
 
   for (const [index, scenario] of cases.entries()) {
@@ -236,7 +307,7 @@ test("maps HubSpot duplicate and transient failures to safe client responses", a
         name: "QA Failure",
         email: `qa.failure.${index}@example.test`,
         phone: "+54 261 555 0101",
-        province: "Mendoza",
+        province: "Mendoza", city: "Godoy Cruz",
         product: "auto",
         details: { make: "QA", model: "Test", year: "2024" }
       })
@@ -245,7 +316,10 @@ test("maps HubSpot duplicate and transient failures to safe client responses", a
     const response = await POST(request);
     assert.equal(response.status, scenario.expectedStatus);
     const body = await response.json();
-    assert.equal(body.ok, undefined);
+    assert.equal(body.ok, true);
+    assert.equal(body.status, scenario.leadStatus);
+    assert.equal([...storedLeads.values()][index].status, scenario.storedStatus);
+    assert.equal(storedLeads.size, index + 1);
     assert.doesNotMatch(JSON.stringify(body), /sensitive upstream details/);
     assert.equal(fetchMock.mock.callCount(), 1);
     fetchMock.mock.restore();
@@ -274,7 +348,7 @@ test("rejects honeypot submissions before contacting HubSpot", async (t) => {
       name: "QA Bot",
       email: "qa.bot@example.test",
       phone: "+54 261 555 0101",
-      province: "Mendoza",
+      province: "Mendoza", city: "Godoy Cruz",
       product: "auto",
       details: { make: "QA", model: "Test", year: "2024" }
     })
@@ -310,7 +384,7 @@ test("enforces the shared per-IP limit under concurrent submissions and blocks e
     headers: { "content-type": "application/json", "x-real-ip": "192.0.2.200" },
     body: JSON.stringify({
       name: "QA Concurrent", email: `qa.concurrent.${index}@example.test`,
-      phone: "+54 261 555 0101", province: "Mendoza", product: "auto",
+      phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "auto",
       details: { make: "QA", model: "Concurrent", year: "2024" }
     })
   }));
@@ -340,7 +414,7 @@ test("fails closed when Redis rate limiting fails and never contacts HubSpot", a
     headers: { "content-type": "application/json", "x-real-ip": "192.0.2.201" },
     body: JSON.stringify({
       name: "QA Redis", email: "qa.redis@example.test", phone: "+54 261 555 0101",
-      province: "Mendoza", product: "auto", details: { make: "QA", model: "Redis", year: "2024" }
+      province: "Mendoza", city: "Godoy Cruz", product: "auto", details: { make: "QA", model: "Redis", year: "2024" }
     })
   });
   const response = await POST(request);
@@ -363,7 +437,7 @@ test("invalid and honeypot submissions are rejected before rate limiting and Hub
     { name: "x", email: "invalid", website: "" },
     {
       website: "bot-filled", name: "QA Bot", email: "qa.bot@example.test",
-      phone: "+54 261 555 0101", province: "Mendoza", product: "auto",
+      phone: "+54 261 555 0101", province: "Mendoza", city: "Godoy Cruz", product: "auto",
       details: { make: "QA", model: "Bot", year: "2024" }
     }
   ];
@@ -377,4 +451,44 @@ test("invalid and honeypot submissions are rejected before rate limiting and Hub
   }
   assert.equal(rateLimitCalls, 0);
   assert.equal(fetchMock.mock.callCount(), 0);
+});
+
+
+test("uses capped exponential backoff for retry scheduling", () => {
+  assert.equal(retryDelayMs(1), 1_000);
+  assert.equal(retryDelayMs(2), 2_000);
+  assert.equal(retryDelayMs(3), 4_000);
+  assert.equal(retryDelayMs(7), 60_000);
+});
+
+test("does not call HubSpot when durable lead persistence fails", async (t) => {
+  const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.HUBSPOT_ACCESS_TOKEN;
+    else process.env.HUBSPOT_ACCESS_TOKEN = previousToken;
+  });
+  __setLeadStoreForTests({ persistLead: async () => { throw new Error("Redis unavailable"); } });
+  const fetchMock = mock.method(globalThis, "fetch", async () => {
+    throw new Error("HubSpot must not be called when persistence fails");
+  });
+  t.after(() => fetchMock.mock.restore());
+
+  const request = new NextRequest("https://preview.example.test/api/leads", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.240" },
+    body: JSON.stringify({
+      name: "QA Persistence",
+      email: "qa.persistence@example.test",
+      phone: "+54 261 555 0101",
+      province: "Mendoza", city: "Godoy Cruz",
+      product: "auto",
+      details: { make: "QA", model: "Test", year: "2024" }
+    })
+  });
+
+  const response = await POST(request);
+  assert.equal(response.status, 503);
+  assert.equal(fetchMock.mock.callCount(), 0);
+  assert.match((await response.json()).error, /guardar la solicitud/i);
 });

@@ -16,6 +16,15 @@ export const metadata: Metadata = {
   },
 };
 
+const products = [
+  { id: "auto", title: "Autos" },
+  { id: "moto", title: "Motos" },
+  { id: "hogar", title: "Hogar" },
+  { id: "consorcio", title: "Consorcio" },
+  { id: "bicicletas", title: "Bicicleta" },
+  { id: "caucion_alquiler", title: "Caución alquiler" },
+] as const;
+
 const sections = [
   {
     title: "1. Responsable del tratamiento de los datos",
@@ -39,9 +48,7 @@ const sections = [
         "Cualquier otra información que nos facilites voluntariamente a través de formularios, chat o correo electrónico.",
       ],
     ],
-    after: [
-      "Datos que recopilamos automáticamente:",
-    ],
+    after: ["Datos que recopilamos automáticamente:"],
     listsAfter: [
       [
         "Datos de navegación e identificadores técnicos: dirección IP, tipo de navegador, dispositivo, sistema operativo, páginas visitadas, tiempo de permanencia y cookies.",
@@ -54,9 +61,7 @@ const sections = [
   },
   {
     title: "3. Finalidades del tratamiento",
-    paragraphs: [
-      "Utilizamos tus datos personales para las siguientes finalidades:",
-    ],
+    paragraphs: ["Utilizamos tus datos personales para las siguientes finalidades:"],
     lists: [
       [
         "Generar cotizaciones de seguros personalizadas.",
@@ -163,58 +168,158 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <main className="section">
-      <article
-        className="container privacy-policy"
-        style={{ maxWidth: 820, lineHeight: 1.75 }}
-      >
-        <Link href="/">← Volver a la landing</Link>
-        <h1 style={{ fontSize: "clamp(2rem,5vw,3.2rem)", marginTop: 24 }}>
-          Política de Privacidad
-        </h1>
-        <p><strong>Última actualización:</strong> Octubre de 2026</p>
-        <p>
-          En CotizaTuSeguro (en adelante, “nosotros”, “nuestro” o “la
-          Plataforma”), accesible a través de https://cotizatuseguro.com.ar/,
-          nos comprometemos a proteger la privacidad y los datos personales de
-          nuestros usuarios. Esta Política de Privacidad describe cómo
-          recopilamos, utilizamos, almacenamos, compartimos y protegemos tu
-          información personal cuando utilizas nuestros servicios de cotización
-          de seguros.
-        </p>
-        <p>
-          Al utilizar nuestra Plataforma, aceptas las prácticas descritas en
-          esta Política. Si no estás de acuerdo, te pedimos que no utilices
-          nuestros servicios.
-        </p>
+    <div className="legal-shell">
+      <a className="skip-link" href="#contenido">
+        Ir al contenido
+      </a>
 
-        {sections.map((section) => (
-          <section key={section.title} style={{ marginTop: 28 }}>
-            <h2 style={{ fontSize: "1.35rem", marginBottom: 12 }}>
-              {section.title}
-            </h2>
-            {section.paragraphs.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
+      <header className="site-header">
+        <div className="container header-inner">
+          <Link className="brand" href="/" aria-label="CotizaTuSeguro, inicio">
+            <span className="brand-mark" aria-hidden="true">
+              🛡
+            </span>
+            <span className="brand-copy">
+              COTIZA TU SEGURO
+              <small>AGUSTÍN MONTES · PRODUCTOR ASESOR</small>
+            </span>
+          </Link>
+          <nav className="main-nav" aria-label="Navegación principal">
+            <Link href="/#seguros">Coberturas</Link>
+            <Link href="/#aseguradoras">Respaldo</Link>
+            <Link href="/#como-funciona">Cómo funciona</Link>
+            <Link href="/#faq">Preguntas frecuentes</Link>
+          </nav>
+          <div className="header-actions">
+            <Link className="header-cta" href="/#cotizar">
+              Solicitar cotización <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main id="contenido">
+        <section className="legal-hero">
+          <div className="container legal-hero-inner">
+            <p className="eyebrow">Información legal</p>
+            <h1>Política de Privacidad</h1>
+            <p className="legal-meta">
+              <strong>Última actualización:</strong> Octubre de 2026
+            </p>
+            <p className="lead">
+              En CotizaTuSeguro (en adelante, “nosotros”, “nuestro” o “la
+              Plataforma”), accesible a través de https://cotizatuseguro.com.ar/,
+              nos comprometemos a proteger la privacidad y los datos personales de
+              nuestros usuarios.
+            </p>
+          </div>
+        </section>
+
+        <section className="section">
+          <article className="container legal-article">
+            <p>
+              Esta Política de Privacidad describe cómo recopilamos, utilizamos,
+              almacenamos, compartimos y protegemos tu información personal cuando
+              utilizas nuestros servicios de cotización de seguros.
+            </p>
+            <p>
+              Al utilizar nuestra Plataforma, aceptas las prácticas descritas en
+              esta Política. Si no estás de acuerdo, te pedimos que no utilices
+              nuestros servicios.
+            </p>
+
+            <nav className="legal-toc" aria-label="Índice de la política de privacidad">
+              <h2>En esta política</h2>
+              <ol>
+                {sections.map((section, index) => (
+                  <li key={section.title}>
+                    <Link href={`#seccion-${index + 1}`}>{section.title}</Link>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+
+            {sections.map((section, index) => (
+              <section key={section.title} id={`seccion-${index + 1}`} className="legal-section">
+                <h2>{section.title}</h2>
+                {section.paragraphs.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+                {section.lists?.map((items, index) => (
+                  <ul key={index}>
+                    {items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ))}
+                {section.after?.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+                {section.listsAfter?.map((items, index) => (
+                  <ul key={index}>
+                    {items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ))}
+                {section.end?.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </section>
             ))}
-            {section.lists?.map((items, index) => (
-              <ul key={index}>
-                {items.map((item) => <li key={item}>{item}</li>)}
-              </ul>
+
+            <p className="legal-back">
+              <Link href="/">← Volver al inicio</Link>
+              {" · "}
+              <Link href="/#cotizar">Solicitar cotización</Link>
+            </p>
+          </article>
+        </section>
+      </main>
+
+      <footer className="site-footer">
+        <div className="container footer-layout">
+          <div className="footer-about">
+            <Link className="brand footer-brand" href="/">
+              <span className="brand-mark" aria-hidden="true">
+                🛡
+              </span>
+              <span className="brand-copy">
+                COTIZA TU SEGURO
+                <small>AGUSTÍN MONTES · PRODUCTOR ASESOR</small>
+              </span>
+            </Link>
+            <p>
+              Asesoramiento personalizado en seguros patrimoniales y de personas,
+              con atención en Mendoza.
+            </p>
+            <p className="ssn-note">
+              Productor Asesor de Seguros · Consultá la información de matrícula y
+              habilitación antes de contratar.
+            </p>
+          </div>
+          <div className="footer-column">
+            <strong>Coberturas</strong>
+            {products.map((p) => (
+              <Link key={p.id} href={`/#cotizar`}>
+                {p.title}
+              </Link>
             ))}
-            {section.after?.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
-            {section.listsAfter?.map((items, index) => (
-              <ul key={index}>
-                {items.map((item) => <li key={item}>{item}</li>)}
-              </ul>
-            ))}
-            {section.end?.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
-          </section>
-        ))}
-      </article>
-    </main>
+          </div>
+          <div className="footer-column">
+            <strong>Navegación</strong>
+            <Link href="/#seguros">Coberturas</Link>
+            <Link href="/#aseguradoras">Respaldo asegurador</Link>
+            <Link href="/#como-funciona">Cómo funciona</Link>
+            <Link href="/#faq">Preguntas frecuentes</Link>
+            <Link href="/privacidad">Política de privacidad</Link>
+          </div>
+        </div>
+        <div className="container footer-bottom">
+          <span>© {new Date().getFullYear()} Agustín Montes · Mendoza, Argentina</span>
+          <Link href="/privacidad">Términos y privacidad</Link>
+        </div>
+      </footer>
+    </div>
   );
 }

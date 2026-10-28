@@ -2,6 +2,16 @@ import { createHash, randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server.js";
 import { z } from "zod";
 import { checkRateLimit } from "./rate-limit.ts";
+import { persistLead, retryDelayMs, type StoredLead } from "./lead-store.ts";
+import { deliverStoredLead } from "./delivery.ts";
+
+// Infrastructure mode is safe only after Vercel Firewall rules for POST /api/leads
+// have been independently verified. Missing the explicit verification flag fails
+// closed to the application-level Upstash limiter.
+function infrastructureRateLimitEnabled() {
+  return process.env.LEADS_RATE_LIMIT_MODE === "infrastructure"
+    && process.env.LEADS_INFRA_RATE_LIMIT_VERIFIED === "true";
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +23,7 @@ const schema = z.object({
   email: z.string().trim().email().max(254),
   phone: z.string().trim().min(8).max(30),
   province: z.string().trim().min(2).max(100),
-  city: z.string().trim().max(100).optional().default(""),
+  city: z.string().trim().min(2, "Ingresá tu localidad o departamento").max(100),
   product: z.enum(["auto", "moto", "hogar", "consorcio", "bicicletas", "caucion_alquiler"]),
   details: z.record(z.string(), z.string().trim().max(200)).optional().default({}),
   attribution: attributionSchema
@@ -79,21 +89,21 @@ export async function POST(request: NextRequest) {
   if (data.website.trim()) return jsonError("No pudimos procesar la solicitud. Revisá los datos e intentá nuevamente.", 400);
 
   const ipHash = createHash("sha256").update(ip).digest("hex").slice(0, 24);
-  let limit: { success: boolean; reset: number };
-  try {
-    limit = await checkRateLimit(ipHash);
-  } catch (error) {
-    console.error("Distributed rate limiter unavailable", { reason: error instanceof Error ? error.name : "unknown" });
-    // Fail closed: do not forward lead submissions to HubSpot when abuse controls are unavailable.
-    return jsonError("La recepción de solicitudes no está disponible temporalmente. Intentá más tarde.", 503);
-  }
-  if (!limit.success) {
-    const retryAfter = Math.max(1, Math.ceil((limit.reset - Date.now()) / 1000));
-    return jsonError("Demasiadas solicitudes. Esperá antes de intentarlo nuevamente.", 429, { "Retry-After": String(retryAfter) });
+  if (!infrastructureRateLimitEnabled()) {
+    let limit: { success: boolean; reset: number };
+    try {
+      limit = await checkRateLimit(ipHash);
+    } catch (error) {
+      console.error("Distributed rate limiter unavailable", { reason: error instanceof Error ? error.name : "unknown" });
+      // Fail closed unless infrastructure rate limiting was explicitly enabled.
+      return jsonError("La recepción de solicitudes no está disponible temporalmente. Intentá más tarde.", 503);
+    }
+    if (!limit.success) {
+      const retryAfter = Math.max(1, Math.ceil((limit.reset - Date.now()) / 1000));
+      return jsonError("Demasiadas solicitudes. Esperá antes de intentarlo nuevamente.", 429, { "Retry-After": String(retryAfter) });
+    }
   }
 
-  const token = process.env.HUBSPOT_ACCESS_TOKEN;
-  if (!token) return jsonError("La recepción de solicitudes todavía no está configurada. Intentá más tarde.", 503);
   const requestId = `SOL-${randomUUID().slice(0, 8).toUpperCase()}`;
   const phone = data.phone.replace(/[\s().-]/g, "");
   const nameParts = data.name.trim().split(/\s+/);
@@ -113,35 +123,74 @@ export async function POST(request: NextRequest) {
   };
   if (lastname) properties.lastname = lastname;
 
-  // HubSpot string properties should be omitted when attribution is absent,
-  // rather than sent as empty strings that can trigger CRM validation errors.
   for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"] as const) {
     const value = data.attribution[key]?.trim();
     if (value) properties[key] = value;
   }
 
-  const endpoint = "https://api.hubapi.com/crm/v3/objects/contacts";
+  const userAgent = request.headers.get("user-agent")?.trim() || undefined;
+  // Optional browser cookies forwarded by the client for Meta matching (never required).
+  const fbp = typeof data.attribution._fbp === "string" ? data.attribution._fbp.trim() || undefined : undefined;
+  const fbc = typeof data.attribution._fbc === "string" ? data.attribution._fbc.trim() || undefined : undefined;
+
+  const now = Date.now();
+  const lead: StoredLead = {
+    requestId,
+    properties,
+    status: "pending",
+    attempts: 0,
+    nextAttemptAt: now,
+    createdAt: now,
+    updatedAt: now,
+    eventContext: {
+      clientIp: ip || undefined,
+      userAgent,
+      fbp,
+      fbc
+    }
+  };
+
+  // Durability is a prerequisite: never call HubSpot unless the lead was persisted first.
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ properties }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(8_000)
-    });
-    if (response.status === 409) {
-      return jsonError("Ya existe un registro coincidente. Revisá HubSpot antes de volver a enviarlo.", 409);
-    }
-    if (!response.ok) {
-      const correlation = response.headers.get("x-hubspot-correlation-id") || "unavailable";
-      console.error("HubSpot lead create failed", { status: response.status, correlation, requestId });
-      if (response.status === 429 || response.status >= 500) return jsonError("El CRM no está disponible temporalmente. Intentá nuevamente en unos minutos.", 503);
-      return jsonError("No pudimos registrar la solicitud. La integración del CRM requiere revisión.", 502);
-    }
-    const result = await response.json() as { id?: string };
-    return NextResponse.json({ ok: true, requestId, contactId: result.id }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    await persistLead(lead);
   } catch (error) {
-    console.error("HubSpot lead request failed", { requestId, reason: error instanceof Error ? error.name : "unknown" });
-    return jsonError("No pudimos conectar con el CRM. Intentá nuevamente.", 503);
+    console.error("Lead persistence failed", {
+      requestId,
+      reason: error instanceof Error ? error.name : "unknown"
+    });
+    return jsonError("No pudimos guardar la solicitud de forma segura. Intentá nuevamente más tarde.", 503);
+  }
+
+  try {
+    const delivered = await deliverStoredLead(requestId);
+    if (delivered?.status === "sent") {
+      return NextResponse.json({ ok: true, requestId, contactId: delivered.contactId }, {
+        status: 201,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+
+    // A permanent upstream rejection is retained for manual review, not falsely queued for retry.
+    if (delivered?.status === "failed") {
+      return NextResponse.json({ ok: true, requestId, status: "needs_review" }, {
+        status: 202,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+
+    // The request is accepted because it is durable; a scheduled retry can process it later.
+    return NextResponse.json({ ok: true, requestId, status: "pending" }, {
+      status: 202,
+      headers: { "Cache-Control": "no-store", "Retry-After": String(Math.max(1, Math.ceil(retryDelayMs(delivered?.attempts ?? 1) / 1000))) }
+    });
+  } catch (error) {
+    console.error("Lead delivery state update failed", {
+      requestId,
+      reason: error instanceof Error ? error.name : "unknown"
+    });
+    return NextResponse.json({ ok: true, requestId, status: "pending" }, {
+      status: 202,
+      headers: { "Cache-Control": "no-store" }
+    });
   }
 }

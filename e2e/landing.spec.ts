@@ -8,14 +8,17 @@ declare global {
 
 test('landing muestra los seis productos del PMV y el formulario', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /tu tranquilidad empieza con la cobertura adecuada/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /cotizá tu seguro con asesoramiento personalizado/i })).toBeVisible();
   await expect(page.locator('#cotizar')).toBeVisible();
   await expect(page.locator('#seguros .coverage-grid button.coverage-action')).toHaveCount(6);
   await expect(page.locator('#product option')).toHaveCount(6);
   await expect(page.locator('#aseguradoras .assurance-card')).toHaveCount(4);
-  await expect(page.locator('#faq details.faq')).toHaveCount(6);
+  await expect(page.locator('#aseguradoras .company-chip')).toHaveCount(7);
+  await expect(page.locator('#faq details.faq')).toHaveCount(8);
   await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
+  // Paso 1 del formulario: Continuar (el envío final está en el paso 2)
+  await expect(page.getByRole('button', { name: /^continuar/i })).toBeVisible();
+  await expect(page.locator('.form-stepper')).toBeVisible();
 });
 
 test('rechazar consentimiento mantiene bloqueadas las etiquetas de medición', async ({ page }) => {
@@ -26,6 +29,7 @@ test('rechazar consentimiento mantiene bloqueadas las etiquetas de medición', a
     }
   });
   await page.goto('/');
+  await waitForConsentBanner(page);
   await page.getByRole('button', { name: 'Rechazar' }).click();
   await expect(page.getByLabel('Preferencias de privacidad')).toHaveCount(0);
   await page.waitForTimeout(500);
@@ -46,7 +50,8 @@ test('aceptar consentimiento carga Meta Pixel y encola PageView', async ({ page 
     });
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Aceptar medición' }).click();
+  await waitForConsentBanner(page);
+  await page.getByRole('button', { name: 'Aceptar' }).click();
   await expect(page.getByLabel('Preferencias de privacidad')).toHaveCount(0);
   await expect(page.locator('#meta-pixel-loader')).toHaveCount(1);
   await expect.poll(async () => page.evaluate(() => window.__metaCalls?.length || 0)).toBeGreaterThanOrEqual(2);
@@ -66,13 +71,72 @@ test('el formulario invalido no intenta enviar leads ni llamar a HubSpot', async
   });
   await page.goto('/');
   await page.locator('#cotizar').scrollIntoViewIfNeeded();
-  await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+  // Paso 1 vacío: Continuar valida en cliente y no llama a la API
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByRole('alert').first()).toBeVisible();
   expect(leadApiCalls).toBe(0);
+});
+
+test('la localidad es obligatoria antes de avanzar al paso 2', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+  await page.getByLabel('Nombre y apellido *').fill('QA Localidad');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.localidad@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByText('Ingresá tu localidad o departamento.')).toBeVisible();
+  await expect(page.locator('#city')).toBeFocused();
+  await page.getByLabel('Localidad o departamento *').fill('Godoy Cruz');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
+});
+
+test('la localidad de un solo caracter no permite avanzar al paso 2', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+  await page.getByLabel('Nombre y apellido *').fill('QA Localidad');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.localidad@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento *').fill('A');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByText('Ingresá una localidad o departamento válido (mínimo 2 caracteres).')).toBeVisible();
+  await expect(page.locator('#city')).toBeFocused();
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toHaveCount(0);
 });
 
 test('la pagina de privacidad se abre y contiene informacion de tratamiento', async ({ page }) => {
   await page.goto('/privacidad');
   await expect(page.locator('body')).toContainText(/privacidad|datos personales|cotización/i);
+  await expect(page.locator('.legal-shell')).toBeVisible();
+  await expect(page.locator('header.site-header')).toBeVisible();
+  await expect(page.locator('footer.site-footer')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /política de privacidad/i })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /solicitar cotización/i }).first()).toBeVisible();
+});
+
+test('el paso 2 bloquea el envío si faltan datos del riesgo', async ({ page }) => {
+  let leadApiCalls = 0;
+  await page.route('**/api/leads', async (route) => {
+    leadApiCalls += 1;
+    await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'blocked in test' }) });
+  });
+
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+  await page.getByLabel('Nombre y apellido *').fill('QA Riesgo');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.riesgo@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento *').fill('Godoy Cruz');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
+  await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+  await expect(page.locator('#make')).toBeFocused();
+  expect(leadApiCalls).toBe(0);
 });
 
 test('solicitud valida envía Meta Lead solo tras éxito de API y sin datos personales', async ({ page }) => {
@@ -95,6 +159,8 @@ test('solicitud valida envía Meta Lead solo tras éxito de API y sin datos pers
     expect(payload).toMatchObject({
       name: 'QA Playwright',
       email: 'qa.playwright@example.test',
+      province: 'Mendoza',
+      city: 'Godoy Cruz',
       product: 'auto',
       website: '',
     });
@@ -109,15 +175,24 @@ test('solicitud valida envía Meta Lead solo tras éxito de API y sin datos pers
   });
 
   await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+
+  // Paso 1 — contacto
   await page.getByLabel('Nombre y apellido *').fill('QA Playwright');
   await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
   await page.getByLabel('Email *').fill('qa.playwright@example.test');
-  await page.getByLabel('Provincia *').fill('Mendoza');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento').fill('Godoy Cruz');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+
+  // Paso 2 — detalle del riesgo + privacidad
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
   await page.getByLabel('Marca *').fill('Toyota');
   await page.getByLabel('Modelo *').fill('Etios');
   await page.getByLabel('Año *').fill('2022');
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+
   await expect.poll(() => leadRequests).toBe(1);
   await expect.poll(async () => page.evaluate(() => (window.__metaCalls || []).filter((args) => args[0] === 'track' && args[1] === 'Lead').length)).toBe(1);
   const leadCall = await page.evaluate(() => (window.__metaCalls || []).find((args) => args[0] === 'track' && args[1] === 'Lead'));
@@ -125,4 +200,58 @@ test('solicitud valida envía Meta Lead solo tras éxito de API y sin datos pers
   expect(JSON.stringify(leadCall)).not.toMatch(/QA Playwright|qa\.playwright@example\.test|261 555 0101/i);
   await expect(page).toHaveURL(/https:\/\/wa\.me\/5492610000000\?text=/);
   expect(new URL(page.url()).searchParams.get('text')).toContain('SOL-QA123456');
+});
+
+
+test('el formulario mueve el foco a los errores y anuncia el cambio de paso', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.locator('#name')).toBeFocused();
+  await expect(page.getByRole('alert').first()).toBeVisible();
+
+  await page.getByLabel('Nombre y apellido *').fill('QA Accesibilidad');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.accessibility@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento *').fill('Godoy Cruz');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+
+  await expect(page.locator('#quote-form-title')).toBeFocused();
+  // Complete required risk fields so this assertion isolates privacy-consent validation.
+  await page.getByLabel('Marca *').fill('Fiat');
+  await page.getByLabel('Modelo *').fill('Cronos');
+  await page.getByLabel('Año *').fill('2022');
+  await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+  await expect(page.locator('#privacyAccepted')).toBeFocused();
+  await expect(page.getByRole('alert').first()).toContainText(/privacidad/i);
+});
+
+
+test('la política de privacidad ofrece índice navegable y anclas estables', async ({ page }) => {
+  await page.goto('/privacidad');
+  const toc = page.getByRole('navigation', { name: 'Índice de la política de privacidad' });
+  await expect(toc).toBeVisible();
+  await expect(toc.getByRole('link')).toHaveCount(13);
+  await toc.getByRole('link', { name: 'Responsable del tratamiento' }).click();
+  await expect(page).toHaveURL(/#seccion-1$/);
+  await expect(page.locator('#seccion-1 h2')).toContainText('Responsable del tratamiento');
+});
+
+test('la cabecera de privacidad conserva el CTA sin desbordar en móvil', async ({ page }) => {
+  for (const width of [320, 390, 560, 768, 900]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/privacidad');
+    const header = page.locator('header.site-header');
+    const cta = header.getByRole('link', { name: /solicitar cotización/i });
+    await expect(cta).toBeVisible();
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+      ctaRight: document.querySelector('header .header-cta')?.getBoundingClientRect().right ?? 0,
+    }));
+    expect(dimensions.document, `privacy at ${width}px overflows to ${dimensions.document}px`).toBeLessThanOrEqual(dimensions.viewport);
+    expect(dimensions.ctaRight, `privacy header CTA exceeds ${width}px viewport`).toBeLessThanOrEqual(width);
+  }
 });
