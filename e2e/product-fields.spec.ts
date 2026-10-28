@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+// Keep the delayed consent banner from obscuring form controls in unrelated PMV tests.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem("analytics-consent", "rejected"));
+});
+
 const productCases = [
   {
     product: "auto",
