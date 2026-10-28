@@ -1,0 +1,75 @@
+import { expect, test } from "@playwright/test";
+
+const productCases = [
+  {
+    product: "auto",
+    label: "Autos",
+    requiredFields: ["make", "model", "year"],
+    forbiddenFields: ["homeSqm", "constructionMaterial", "wheelSize", "monthlyRent"],
+  },
+  {
+    product: "moto",
+    label: "Motos",
+    requiredFields: ["make", "model", "year"],
+    forbiddenFields: ["homeSqm", "constructionMaterial", "wheelSize", "monthlyRent"],
+  },
+  {
+    product: "hogar",
+    label: "Hogar",
+    requiredFields: ["homeSqm", "location", "occupancy"],
+    forbiddenFields: ["make", "constructionMaterial", "wheelSize", "monthlyRent"],
+  },
+  {
+    product: "consorcio",
+    label: "Consorcio",
+    requiredFields: ["homeSqm", "location", "constructionMaterial", "activity"],
+    forbiddenFields: ["make", "occupancy", "wheelSize", "monthlyRent"],
+  },
+  {
+    product: "bicicletas",
+    label: "Bicicleta",
+    requiredFields: ["make", "model", "year", "wheelSize", "bikeMaterial", "insuredAmount"],
+    forbiddenFields: ["homeSqm", "constructionMaterial", "monthlyRent"],
+  },
+  {
+    product: "caucion_alquiler",
+    label: "Caución alquiler",
+    requiredFields: ["monthlyRent", "contractDuration"],
+    forbiddenFields: ["make", "homeSqm", "constructionMaterial", "wheelSize"],
+  },
+] as const;
+
+for (const productCase of productCases) {
+  test(`el producto ${productCase.label} muestra únicamente sus campos de riesgo`, async ({ page }) => {
+    let leadApiCalls = 0;
+    await page.route("**/api/leads", async (route) => {
+      leadApiCalls += 1;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "blocked in product field test" }),
+      });
+    });
+
+    await page.goto("/");
+    await page.locator("#cotizar").scrollIntoViewIfNeeded();
+    await page.getByLabel("Tipo de seguro *").selectOption(productCase.product);
+    await page.getByLabel("Nombre y apellido *").fill("QA Producto");
+    await page.getByLabel("WhatsApp *").fill("+54 261 555 0101");
+    await page.getByLabel("Email *").fill("qa.product@example.test");
+    await page.getByLabel("Provincia *").selectOption("Mendoza");
+    await page.getByRole("button", { name: /^continuar/i }).click();
+
+    for (const fieldId of productCase.requiredFields) {
+      await expect(page.locator(`#${fieldId}`), `expected #${fieldId} for ${productCase.product}`).toBeVisible();
+      await expect(page.locator(`#${fieldId}`)).toHaveAttribute("required", "");
+    }
+    for (const fieldId of productCase.forbiddenFields) {
+      await expect(page.locator(`#${fieldId}`), `unexpected #${fieldId} for ${productCase.product}`).toHaveCount(0);
+    }
+
+    await expect(page.locator("#privacyAccepted")).toBeVisible();
+    await expect(page.getByRole("button", { name: /registrar y continuar por whatsapp/i })).toBeVisible();
+    expect(leadApiCalls).toBe(0);
+  });
+}
