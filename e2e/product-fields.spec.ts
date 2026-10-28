@@ -68,7 +68,7 @@ for (const productCase of productCases) {
       await expect(page.locator(`#${fieldId}`), `unexpected #${fieldId} for ${productCase.product}`).toHaveCount(0);
     }
 
-    await expect(page.locator("#privacyAccepted")).toBeVisible();
+    await expect(page.getByRole("checkbox")).toBeVisible();
     await expect(page.getByRole("button", { name: /registrar y continuar por whatsapp/i })).toBeVisible();
     expect(leadApiCalls).toBe(0);
   });
