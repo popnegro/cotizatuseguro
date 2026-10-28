@@ -112,6 +112,28 @@ test('la pagina de privacidad se abre y contiene informacion de tratamiento', as
   await expect(page.getByRole('link', { name: /solicitar cotización/i }).first()).toBeVisible();
 });
 
+test('el paso 2 bloquea el envío si faltan datos del riesgo', async ({ page }) => {
+  let leadApiCalls = 0;
+  await page.route('**/api/leads', async (route) => {
+    leadApiCalls += 1;
+    await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'blocked in test' }) });
+  });
+
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+  await page.getByLabel('Nombre y apellido *').fill('QA Riesgo');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.riesgo@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento *').fill('Godoy Cruz');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
+  await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+  await expect(page.locator('#make')).toBeFocused();
+  expect(leadApiCalls).toBe(0);
+});
+
 test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', async ({ page }) => {
   let leadRequests = 0;
   await page.route('**/api/leads', async (route) => {
