@@ -161,3 +161,14 @@ test('el formulario mueve el foco a los errores y anuncia el cambio de paso', as
   await expect(page.locator('#privacyAccepted')).toBeFocused();
   await expect(page.getByRole('alert').first()).toContainText(/privacidad/i);
 });
+
+
+test('la política de privacidad ofrece índice navegable y anclas estables', async ({ page }) => {
+  await page.goto('/privacidad');
+  const toc = page.getByRole('navigation', { name: 'Índice de la política de privacidad' });
+  await expect(toc).toBeVisible();
+  await expect(toc.getByRole('link')).toHaveCount(13);
+  await toc.getByRole('link', { name: /1\\. Responsable del tratamiento/i }).click();
+  await expect(page).toHaveURL(/#seccion-1$/);
+  await expect(page.locator('#seccion-1 h2')).toContainText('Responsable del tratamiento');
+});
