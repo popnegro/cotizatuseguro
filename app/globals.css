@@ -202,3 +202,21 @@ h2{color:#102a43}
 @media(min-width:901px){
   .mobile-nav-panel{display:none!important}
 }
+
+/* P1 — form trust, steps, field errors */
+.quote-trust{margin-top:22px;padding-top:18px;border-top:1px solid #ffffff22}
+.quote-trust p{margin:0 0 6px;font-size:.86rem;color:#d8e5db;line-height:1.5}
+.quote-trust strong{color:#fff}
+.quote-trust-note{opacity:.85;font-size:.8rem!important}
+.form-stepper{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0 8px}
+.step-pill{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:.78rem;font-weight:800;background:#eaf4fb;color:#617487}
+.step-pill.is-active{background:#1769aa;color:#fff}
+.step-pill.is-done{background:#e5f5ed;color:#12805c}
+.step-pill-sep{color:#bacbd8;font-weight:700}
+.field-hint{font-size:.78rem;color:var(--muted);line-height:1.4}
+.field-error{font-size:.78rem;color:#922f24;font-weight:700;line-height:1.35}
+.field.has-error input,.field.has-error select{border-color:#e8a99a;box-shadow:0 0 0 3px #f4d0c940}
+.form-step-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#f5f9fc;border:1px solid var(--line);border-radius:12px}
+.form-step-summary p{margin:0;font-size:.88rem;color:var(--ink)}
+.link-button{border:0;background:none;color:#1769aa;font-weight:800;cursor:pointer;padding:0;font-size:.86rem}
+.link-button:hover{text-decoration:underline}
