@@ -10,12 +10,12 @@ type FormState = {
   insuredAmount: string; monthlyRent: string; contractDuration: string; privacyAccepted: boolean;
 };
 const products: { id: Product; title: string; desc: string; shortDesc: string; icon: string }[] = [
-  { id: "auto", title: "Autos", desc: "Cobertura para tu auto ante responsabilidad civil, robo, daños o todo riesgo.", shortDesc: "Responsabilidad civil, robo y daños.", icon: "🚘" },
-  { id: "moto", title: "Motos", desc: "Protección para tu moto o ciclomotor con auxilio mecánico y respaldo.", shortDesc: "Auxilio mecánico y respaldo.", icon: "🏍️" },
-  { id: "hogar", title: "Hogar", desc: "Respaldo ante incendio, robo de contenidos, daños por agua y responsabilidad civil.", shortDesc: "Incendio, robo y daños en el hogar.", icon: "🏡" },
-  { id: "consorcio", title: "Consorcio", desc: "Protección integral para consorcios, administraciones y espacios comunes.", shortDesc: "Edificios y espacios comunes.", icon: "🏢" },
-  { id: "bicicletas", title: "Bicicleta", desc: "Cuidá tu bicicleta frente a robo en vía pública y accidentes en traslados.", shortDesc: "Robo y accidentes en traslados.", icon: "🚲" },
-  { id: "caucion_alquiler", title: "Caución alquiler", desc: "Garantía de caución para alquilar vivienda o comercio sin avales propietarios.", shortDesc: "Garantía para alquilar vivienda o comercio.", icon: "🔑" }
+  { id: "auto", title: "Autos", desc: "Consultá alternativas de responsabilidad civil, robo y daños. La cobertura disponible depende de la propuesta y de las condiciones de la póliza.", shortDesc: "Consultá por responsabilidad civil, robo y daños.", icon: "🚘" },
+  { id: "moto", title: "Motos", desc: "Solicitá alternativas para tu moto o ciclomotor. Los servicios adicionales, como auxilio mecánico, dependen del producto y sus condiciones.", shortDesc: "Alternativas según el tipo de moto y cobertura.", icon: "🏍️" },
+  { id: "hogar", title: "Hogar", desc: "Consultá por opciones relacionadas con incendio, robo de contenidos, daños por agua y responsabilidad civil, según las condiciones de cada póliza.", shortDesc: "Consultá por riesgos del hogar.", icon: "🏡" },
+  { id: "consorcio", title: "Consorcio", desc: "Solicitá una evaluación para el edificio, las áreas comunes y las características del consorcio. Las coberturas dependen de la propuesta.", shortDesc: "Opciones para edificios y espacios comunes.", icon: "🏢" },
+  { id: "bicicletas", title: "Bicicleta", desc: "Consultá alternativas para asegurar tu bicicleta y revisá los riesgos, límites y condiciones ofrecidos en cada propuesta.", shortDesc: "Alternativas para bicicletas.", icon: "🚲" },
+  { id: "caucion_alquiler", title: "Caución alquiler", desc: "Consultá por una garantía de caución para alquiler de vivienda o comercio. La aprobación y los requisitos dependen de la evaluación del proveedor.", shortDesc: "Consulta por caución de alquiler.", icon: "🔑" }
 ];
 
 const companies = [
@@ -341,8 +341,8 @@ export default function Home() {
         <section className="hero"><div className="container hero-grid">
           <div>
             <span className="eyebrow">Productor asesor · Mendoza</span>
-            <h1>Tu tranquilidad empieza con la cobertura adecuada.</h1>
-            <p className="lead">Cotizá con un Productor Asesor de Seguros. Completás unos datos y seguís la consulta por WhatsApp: sin precio automático en el sitio, con atención personalizada según tu riesgo.</p>
+            <h1>Cotizá tu seguro con asesoramiento personalizado.</h1>
+            <p className="lead">Solicitá una cotización para tu auto, moto, hogar, consorcio, bicicleta o caución de alquiler. Registrá tus datos y continuá la consulta por WhatsApp. La solicitud no implica la emisión de una póliza ni garantiza la aprobación de una cobertura.</p>
             <div className="hero-actions"><a className="button" href="#cotizar" onClick={() => track("cta_click", { cta_location: "hero" })}>Solicitar cotización <span aria-hidden="true">→</span></a><a className="secondary" href="#seguros">Ver coberturas</a></div>
             <ul className="trustline trust-list"><li>Asesor PAS</li><li>Cotización por WhatsApp</li><li>Sin tarifa automática en web</li></ul>
           </div>
@@ -360,13 +360,13 @@ export default function Home() {
         </div></section>
 
         <section className="section assurance-section" id="aseguradoras"><div className="container">
-          <div className="section-intro"><span className="eyebrow">Respaldo asegurador</span><h2>Compañías con las que trabajo</h2><p>Según el producto y el perfil del riesgo, evaluamos alternativas entre estas aseguradoras y otras habilitadas.</p></div>
+          <div className="section-intro"><span className="eyebrow">Respaldo asegurador</span><h2>Compañías con las que trabajo</h2><p>La disponibilidad de cada aseguradora y producto debe confirmarse para tu solicitud; las alternativas dependen del riesgo y de las condiciones vigentes.</p></div>
           <ul className="company-strip" aria-label="Compañías aseguradoras">
             {companies.map((name) => (<li className="company-chip" key={name}>{name}</li>))}
           </ul>
           <div className="assurance-grid">
-            <article className="assurance-card"><span aria-hidden="true">🏢</span><h3>Opciones reales</h3><p>Triunfo, Mercantil Andina, Allianz, Sancor, San Cristóbal, Galicia y Rivadavia, entre otras habilitadas según el riesgo.</p></article>
-            <article className="assurance-card"><span aria-hidden="true">🗺️</span><h3>Alcance nacional</h3><p>Atención desde Mendoza para consultas de seguros en Argentina, de acuerdo con las condiciones de cada cobertura.</p></article>
+            <article className="assurance-card"><span aria-hidden="true">🏢</span><h3>Opciones reales</h3><p>La posibilidad de cotizar con cada compañía se confirma según el producto, el riesgo y la disponibilidad vigente.</p></article>
+            <article className="assurance-card"><span aria-hidden="true">🗺️</span><h3>Alcance nacional</h3><p>Atención desde Mendoza. El alcance territorial y la disponibilidad de cada producto se confirman al evaluar la solicitud.</p></article>
             <article className="assurance-card"><span aria-hidden="true">⚡</span><h3>Gestión ágil</h3><p>Un canal directo para organizar la solicitud, resolver dudas y acompañar los siguientes pasos.</p></article>
             <article className="assurance-card"><span aria-hidden="true">🤝</span><h3>Trato personalizado</h3><p>Seguimiento humano por WhatsApp, sin perder el contexto de tu solicitud.</p></article>
           </div>
@@ -376,7 +376,7 @@ export default function Home() {
           <aside className="quote-aside">
             <span className="eyebrow">Solicitud de cotización</span>
             <h2>Empecemos por lo importante.</h2>
-            <p>Completá estos datos y registraremos tu solicitud para continuar la consulta por WhatsApp.</p>
+            <p>Completá los datos solicitados para registrar tu consulta. El asesor confirmará los pasos siguientes y las alternativas disponibles.</p>
             <ul>
               <li>Datos iniciales, sin documentación innecesaria.</li>
               <li>Producto identificado desde el inicio.</li>
@@ -502,17 +502,17 @@ export default function Home() {
         </div></div></section>
 
         <section className="section section-soft" id="faq"><div className="container"><div className="section-intro"><span className="eyebrow">Dudas habituales</span><h2>Preguntas frecuentes</h2><p>Respuestas claras sobre el proceso de cotización y asesoramiento.</p></div><div className="faq-list">
-          <details className="faq" open><summary>¿Cómo solicito una cotización?</summary><p>En dos pasos: primero tus datos de contacto y el tipo de seguro; después el detalle del riesgo. Al enviar, registramos la solicitud y podés continuar por WhatsApp.</p></details>
+          <details className="faq" open><summary>¿Cómo solicito una cotización?</summary><p>Completá los datos de contacto y el tipo de seguro; luego agregá los detalles del riesgo. La solicitud queda registrada y podés continuar la consulta por WhatsApp.</p></details>
           <details className="faq"><summary>¿La cotización es automática o personalizada?</summary><p>El formulario inicia el proceso; no emite una póliza ni confirma una tarifa automática. La propuesta depende del producto y de la evaluación correspondiente.</p></details>
           <details className="faq"><summary>¿Por qué el contacto continúa por WhatsApp?</summary><p>WhatsApp permite continuar la conversación directamente con el asesor. La apertura de la aplicación no confirma que el mensaje se haya enviado.</p></details>
-          <details className="faq"><summary>¿Qué información necesito para cotizar?</summary><p>Los datos iniciales solicitados en el formulario. Cualquier documentación adicional se evaluará si resulta necesaria.</p></details>
-          <details className="faq"><summary>¿Puedo consultar por más de un seguro?</summary><p>Sí. Podés generar una solicitud por cada producto para mantener cada consulta identificada.</p></details>
+          <details className="faq"><summary>¿Qué información necesito para cotizar?</summary><p>El formulario solicita datos de contacto y detalles que varían según el producto, como datos del vehículo, características del inmueble o información del alquiler. El asesor puede solicitar información adicional si es necesaria para evaluar el riesgo.</p></details>
+          <details className="faq"><summary>¿De qué depende el precio de un seguro?</summary><p>Depende del producto, las características del bien o riesgo, la suma asegurada, las coberturas solicitadas, los criterios de evaluación y las condiciones ofrecidas por cada aseguradora. El precio se confirma en la propuesta correspondiente.</p></details>\n          <details className="faq"><summary>¿La solicitud garantiza que me otorguen la cobertura?</summary><p>No. Enviar el formulario inicia una consulta y no equivale a contratar un seguro. La aceptación, el precio, los límites, las exclusiones y la vigencia dependen de la evaluación y de la documentación contractual aplicable.</p></details>\n          <details className="faq"><summary>¿Cómo verifico la identidad y habilitación del asesor?</summary><p>Antes de contratar, solicitá los datos profesionales y verificá la matrícula y habilitación en el <a href="https://www.argentina.gob.ar/superintendencia-de-seguros/mercado-asegurador/productor-asesor-de-seguros" target="_blank" rel="noreferrer">registro oficial de la SSN</a>. El envío del formulario no confirma una credencial ni una póliza.</p></details>\n          <details className="faq"><summary>¿Puedo consultar por más de un seguro?</summary><p>Sí. Podés generar una solicitud por cada producto para mantener cada consulta identificada.</p></details>
           <details className="faq"><summary>¿Cómo se tratan mis datos personales?</summary><p>Consultá la <a href="/privacidad">política de privacidad</a> antes de enviar tus datos. La solicitud se procesa para gestionar la cotización.</p></details>
         </div></div></section>
       </main>
 
       <footer className="site-footer"><div className="container footer-layout">
-        <div className="footer-about"><a className="brand footer-brand" href="#"><span className="brand-mark" aria-hidden="true">🛡</span><span className="brand-copy">COTIZA TU SEGURO<small>AGUSTÍN MONTES · PRODUCTOR ASESOR</small></span></a><p>Asesoramiento personalizado en seguros patrimoniales y de personas, con atención en Mendoza.</p><p className="ssn-note">Productor Asesor de Seguros · Consultá la información de matrícula y habilitación antes de contratar.</p></div>
+        <div className="footer-about"><a className="brand footer-brand" href="#"><span className="brand-mark" aria-hidden="true">🛡</span><span className="brand-copy">COTIZA TU SEGURO<small>AGUSTÍN MONTES · PRODUCTOR ASESOR</small></span></a><p>Asesoramiento personalizado en seguros patrimoniales y de personas, con atención en Mendoza.</p><p className="ssn-note">Antes de contratar, verificá la matrícula y habilitación profesional en el registro oficial de la <a href="https://www.argentina.gob.ar/superintendencia-de-seguros/mercado-asegurador/productor-asesor-de-seguros" target="_blank" rel="noreferrer">Superintendencia de Seguros de la Nación (SSN)</a>.</p></div>
         <div className="footer-column"><strong>Coberturas</strong>{products.map((p) => <a key={p.id} href="#cotizar" onClick={() => chooseProduct(p.id)}>{p.title}</a>)}</div>
         <div className="footer-column"><strong>Navegación</strong><a href="#seguros">Coberturas</a><a href="#aseguradoras">Respaldo asegurador</a><a href="#como-funciona">Cómo funciona</a><a href="#faq">Preguntas frecuentes</a><a href="/privacidad">Política de privacidad</a></div>
       </div><div className="container footer-bottom"><span>© {new Date().getFullYear()} Agustín Montes · Mendoza, Argentina</span><a href="/privacidad">Términos y privacidad</a></div></footer>
