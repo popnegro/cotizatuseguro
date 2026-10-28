@@ -197,6 +197,13 @@ export default function Home() {
       goToStep2();
       return;
     }
+    // The form uses noValidate so step 1 can run custom inline validation.
+    // On step 2, explicitly invoke native constraints (required, type, min/max)
+    // before attempting persistence, avoiding a generic API error for missing details.
+    if (!event.currentTarget.checkValidity()) {
+      event.currentTarget.reportValidity();
+      return;
+    }
     if (!form.privacyAccepted) {
       setFieldErrors((prev) => ({ ...prev, privacy: "Confirmá la política de privacidad." }));
       setError("Leé la información de privacidad y confirmá para continuar.");
