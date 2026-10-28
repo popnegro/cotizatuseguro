@@ -168,8 +168,8 @@ export default function Home() {
     if (!form.province.trim()) {
       errors.province = "Seleccioná tu provincia.";
     }
-    if (!form.city.trim()) {
-      errors.city = "Ingresá tu localidad o departamento.";
+    if (form.city.trim().length < 2) {
+      errors.city = "Ingresá una localidad o departamento válido (mínimo 2 caracteres).";
     }
     setFieldErrors(errors);
     const firstInvalid = ["name", "phone", "email", "province", "city"].find((key) => errors[key]);
