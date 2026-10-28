@@ -63,6 +63,7 @@ for (const productCase of productCases) {
     await page.getByLabel("WhatsApp *").fill("+54 261 555 0101");
     await page.getByLabel("Email *").fill("qa.product@example.test");
     await page.getByLabel("Provincia *").selectOption("Mendoza");
+      await page.getByLabel("Localidad o departamento *").fill("Godoy Cruz");
     await page.getByRole("button", { name: /^continuar/i }).click();
 
     for (const fieldId of productCase.requiredFields) {
@@ -90,6 +91,7 @@ for (const productCase of productCases) {
       await page.getByLabel("WhatsApp *").fill("+54 261 555 0101");
       await page.getByLabel("Email *").fill("qa.product@example.test");
       await page.getByLabel("Provincia *").selectOption("Mendoza");
+      await page.getByLabel("Localidad o departamento *").fill("Godoy Cruz");
       await page.getByRole("button", { name: /^continuar/i }).click();
 
       const dimensions = await page.evaluate(() => ({
@@ -129,6 +131,7 @@ test("la solicitud conserva atribución UTM y gclid al registrar el lead", async
   await page.getByLabel("WhatsApp *").fill("+54 261 555 0101");
   await page.getByLabel("Email *").fill("qa.attribution@example.test");
   await page.getByLabel("Provincia *").selectOption("Mendoza");
+      await page.getByLabel("Localidad o departamento *").fill("Godoy Cruz");
   await page.getByRole("button", { name: /^continuar/i }).click();
   await page.getByLabel("Marca *").fill("Toyota");
   await page.getByLabel("Modelo *").fill("Corolla");
