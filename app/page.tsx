@@ -292,6 +292,7 @@ export default function Home() {
 
   return (
     <>
+      <a className="skip-link" href="#cotizar">Ir a cotizar</a>
       <header className="site-header"><div className="container header-inner">
         <a className="brand" href="#" aria-label="Agustín Montes, inicio"><span className="brand-mark" aria-hidden="true">🛡</span><span className="brand-copy">COTIZA TU SEGURO<small>AGUSTÍN MONTES · PRODUCTOR ASESOR</small></span></a>
         <nav className="main-nav" aria-label="Navegación principal">
@@ -326,13 +327,13 @@ export default function Home() {
             <div className="hero-actions"><a className="button" href="#cotizar" onClick={() => track("cta_click", { cta_location: "hero" })}>Solicitar cotización <span aria-hidden="true">→</span></a><a className="secondary" href="#seguros">Ver coberturas</a></div>
             <ul className="trustline trust-list"><li>Asesor PAS</li><li>Cotización por WhatsApp</li><li>Sin tarifa automática en web</li></ul>
           </div>
-          <div className="hero-card"><div className="hero-card-top"><strong>¿Qué cobertura necesitás?</strong><p>Elegí un seguro y completá los datos básicos para cotizar.</p></div>
+          <div className="hero-card"><div className="hero-card-top"><strong>Elegí un producto</strong><p>Seleccioná y saltás al formulario de cotización.</p></div>
             <div className="product-grid">{products.map((p) => <button className={`product-link${form.product === p.id ? " is-selected" : ""}`} key={p.id} onClick={() => chooseProduct(p.id)} type="button" aria-pressed={form.product === p.id}><span className="product-icon" aria-hidden="true">{p.icon}</span><strong>{p.title}</strong><span>{p.shortDesc}</span></button>)}</div>
           </div>
         </div></section>
 
         <section className="section" id="seguros"><div className="container">
-          <div className="section-intro"><span className="eyebrow">Coberturas disponibles</span><h2>Protección diseñada para tus necesidades</h2><p>Seleccioná el seguro que te interesa para precargar el formulario con la información correspondiente.</p></div>
+          <div className="section-intro"><span className="eyebrow">Coberturas disponibles</span><h2>Qué podemos cotizar</h2><p>Elegí el producto y el formulario se precarga con los datos del riesgo que necesitamos para cotizar.</p></div>
           <div className="coverage-grid">{products.map((p, index) => <article className="coverage-card" key={p.id}>
             <div className="coverage-card-top"><span className="product-icon" aria-hidden="true">{p.icon}</span><span className="coverage-category">{["VEHÍCULOS","VEHÍCULOS","VIVIENDA","EDIFICIOS","MOVILIDAD","GARANTÍAS"][index]}</span></div>
             <h3>{p.title}</h3><p>{p.desc}</p><button className="coverage-action" type="button" onClick={() => chooseProduct(p.id)}>Cotizar {p.title.toLowerCase()} <span aria-hidden="true">→</span></button>
@@ -340,7 +341,7 @@ export default function Home() {
         </div></section>
 
         <section className="section assurance-section" id="aseguradoras"><div className="container">
-          <div className="section-intro"><span className="eyebrow">Solvencia y trayectoria</span><h2>Compañías con las que trabajo</h2><p>Cotizamos y gestionamos con aseguradoras de primera línea. Según el producto y el perfil del riesgo, evaluamos alternativas entre estas compañías y otras habilitadas.</p></div>
+          <div className="section-intro"><span className="eyebrow">Respaldo asegurador</span><h2>Compañías con las que trabajo</h2><p>Según el producto y el perfil del riesgo, evaluamos alternativas entre estas aseguradoras y otras habilitadas.</p></div>
           <ul className="company-strip" aria-label="Compañías aseguradoras">
             {companies.map((name) => (<li className="company-chip" key={name}>{name}</li>))}
           </ul>
@@ -372,9 +373,9 @@ export default function Home() {
             <span className="eyebrow">Formulario de cotización</span>
             <h2>¿Qué necesitás asegurar?</h2>
             <div className="form-stepper" aria-label="Progreso del formulario">
-              <span className={formStep === 1 ? "step-pill is-active" : "step-pill is-done">1. Contacto</span>
+              <span className={formStep === 1 ? "step-pill is-active" : "step-pill is-done"}>1. Contacto</span>
               <span className="step-pill-sep" aria-hidden="true">→</span>
-              <span className={formStep === 2 ? "step-pill is-active" : "step-pill">2. Detalle del riesgo</span>
+              <span className={formStep === 2 ? "step-pill is-active" : "step-pill"}>2. Detalle del riesgo</span>
             </div>
             <p className="help">{formStep === 1 ? "Paso 1 de 2 · Datos de contacto y tipo de seguro." : "Paso 2 de 2 · Detalle del riesgo y envío."}</p>
             {error && <div className="form-error" role="alert">{error}</div>}
@@ -471,14 +472,14 @@ export default function Home() {
           </div>
         </div></section>
 
-        <section className="section" id="como-funciona"><div className="container"><div className="section-intro"><span className="eyebrow">Paso a paso</span><h2>Solicitá tu cotización en minutos</h2><p>Completá los datos básicos. Registramos tu solicitud para continuar el asesoramiento por WhatsApp.</p></div><div className="steps">
-          <article className="step"><div className="step-number">1</div><h3>Elegí tu cobertura</h3><p>Indicá qué querés asegurar y compartí los datos iniciales.</p></article>
-          <article className="step"><div className="step-number">2</div><h3>Registramos tu solicitud</h3><p>La consulta queda identificada para darle seguimiento comercial.</p></article>
-          <article className="step"><div className="step-number">3</div><h3>Continuá por WhatsApp</h3><p>Se abre una conversación para avanzar con el asesoramiento.</p></article>
+        <section className="section" id="como-funciona"><div className="container"><div className="section-intro"><span className="eyebrow">Paso a paso</span><h2>De la solicitud a la cotización</h2><p>Un proceso corto: datos de contacto, detalle del riesgo y seguimiento por WhatsApp con un productor asesor.</p></div><div className="steps">
+          <article className="step"><div className="step-number">1</div><h3>Contacto y producto</h3><p>Indicás qué querés asegurar y cómo contactarte.</p></article>
+          <article className="step"><div className="step-number">2</div><h3>Detalle del riesgo</h3><p>Completás solo los datos necesarios para cotizar ese producto.</p></article>
+          <article className="step"><div className="step-number">3</div><h3>Seguimiento por WhatsApp</h3><p>Registramos la solicitud y continuás con el asesoramiento personalizado.</p></article>
         </div></div></section>
 
         <section className="section section-soft" id="faq"><div className="container"><div className="section-intro"><span className="eyebrow">Dudas habituales</span><h2>Preguntas frecuentes</h2><p>Respuestas claras sobre el proceso de cotización y asesoramiento.</p></div><div className="faq-list">
-          <details className="faq" open><summary>¿Cómo solicito una cotización?</summary><p>Completás el formulario con los datos iniciales de tu cobertura y contacto. Al enviar, el sistema registra tu solicitud y te ofrece continuar por WhatsApp.</p></details>
+          <details className="faq" open><summary>¿Cómo solicito una cotización?</summary><p>En dos pasos: primero tus datos de contacto y el tipo de seguro; después el detalle del riesgo. Al enviar, registramos la solicitud y podés continuar por WhatsApp.</p></details>
           <details className="faq"><summary>¿La cotización es automática o personalizada?</summary><p>El formulario inicia el proceso; no emite una póliza ni confirma una tarifa automática. La propuesta depende del producto y de la evaluación correspondiente.</p></details>
           <details className="faq"><summary>¿Por qué el contacto continúa por WhatsApp?</summary><p>WhatsApp permite continuar la conversación directamente con el asesor. La apertura de la aplicación no confirma que el mensaje se haya enviado.</p></details>
           <details className="faq"><summary>¿Qué información necesito para cotizar?</summary><p>Los datos iniciales solicitados en el formulario. Cualquier documentación adicional se evaluará si resulta necesaria.</p></details>
