@@ -101,6 +101,20 @@ test('la localidad es obligatoria antes de avanzar al paso 2', async ({ page }) 
   await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
 });
 
+test('la localidad de un solo caracter no permite avanzar al paso 2', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+  await page.getByLabel('Nombre y apellido *').fill('QA Localidad');
+  await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
+  await page.getByLabel('Email *').fill('qa.localidad@example.test');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento *').fill('A');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByText('Ingresá una localidad o departamento válido (mínimo 2 caracteres).')).toBeVisible();
+  await expect(page.locator('#city')).toBeFocused();
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toHaveCount(0);
+});
+
 test('la pagina de privacidad se abre y contiene informacion de tratamiento', async ({ page }) => {
   await page.goto('/privacidad');
   await expect(page.locator('body')).toContainText(/privacidad|datos personales|cotización/i);
