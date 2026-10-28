@@ -172,3 +172,20 @@ test('la política de privacidad ofrece índice navegable y anclas estables', as
   await expect(page).toHaveURL(/#seccion-1$/);
   await expect(page.locator('#seccion-1 h2')).toContainText('Responsable del tratamiento');
 });
+
+test('la cabecera de privacidad conserva el CTA sin desbordar en móvil', async ({ page }) => {
+  for (const width of [320, 390, 560, 768, 900]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/privacidad');
+    const header = page.locator('header.site-header');
+    const cta = header.getByRole('link', { name: /solicitar cotización/i });
+    await expect(cta).toBeVisible();
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+      ctaRight: document.querySelector('header .header-cta')?.getBoundingClientRect().right ?? 0,
+    }));
+    expect(dimensions.document, `privacy at ${width}px overflows to ${dimensions.document}px`).toBeLessThanOrEqual(dimensions.viewport);
+    expect(dimensions.ctaRight, `privacy header CTA exceeds ${width}px viewport`).toBeLessThanOrEqual(width);
+  }
+});
