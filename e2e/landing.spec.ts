@@ -63,6 +63,12 @@ test('el formulario invalido no intenta enviar leads ni llamar a HubSpot', async
 test('la pagina de privacidad se abre y contiene informacion de tratamiento', async ({ page }) => {
   await page.goto('/privacidad');
   await expect(page.locator('body')).toContainText(/privacidad|datos personales|cotización/i);
+  await expect(page.locator('.legal-shell')).toBeVisible();
+  await expect(page.locator('header.site-header')).toBeVisible();
+  await expect(page.locator('footer.site-footer')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /política de privacidad/i })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /solicitar cotización/i }).first()).toBeVisible();
 });
 
 test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', async ({ page }) => {
