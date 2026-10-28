@@ -140,3 +140,14 @@ test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', a
   await expect(page).toHaveURL(/https:\/\/wa\.me\/5492610000000\?text=/);
   expect(new URL(page.url()).searchParams.get('text')).toContain('SOL-QA123456');
 });
+
+
+test('la política de privacidad ofrece un índice navegable y anclas estables', async ({ page }) => {
+  await page.goto('/privacidad');
+  const toc = page.getByRole('navigation', { name: 'Índice de la política de privacidad' });
+  await expect(toc).toBeVisible();
+  await expect(toc.getByRole('link')).toHaveCount(13);
+  await toc.getByRole('link', { name: /1\. Responsable del tratamiento/i }).click();
+  await expect(page).toHaveURL(/#seccion-1$/);
+  await expect(page.locator('#seccion-1 h2')).toContainText('Responsable del tratamiento');
+});
