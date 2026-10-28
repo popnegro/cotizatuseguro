@@ -198,6 +198,10 @@ test('el formulario mueve el foco a los errores y anuncia el cambio de paso', as
   await page.getByRole('button', { name: /^continuar/i }).click();
 
   await expect(page.locator('#quote-form-title')).toBeFocused();
+  // Complete required risk fields so this assertion isolates privacy-consent validation.
+  await page.getByLabel('Marca *').fill('Fiat');
+  await page.getByLabel('Modelo *').fill('Cronos');
+  await page.getByLabel('Año *').fill('2022');
   await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
   await expect(page.locator('#privacyAccepted')).toBeFocused();
   await expect(page.getByRole('alert').first()).toContainText(/privacidad/i);
