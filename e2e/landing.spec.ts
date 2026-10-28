@@ -12,7 +12,7 @@ test('landing muestra los seis productos del PMV y el formulario', async ({ page
   await expect(page.locator('#product option')).toHaveCount(6);
   await expect(page.locator('#aseguradoras .assurance-card')).toHaveCount(4);
   await expect(page.locator('#aseguradoras .company-chip')).toHaveCount(7);
-  await expect(page.locator('#faq details.faq')).toHaveCount(9);
+  await expect(page.locator('#faq details.faq')).toHaveCount(8);
   await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
   // Paso 1 del formulario: Continuar (el envío final está en el paso 2)
   await expect(page.getByRole('button', { name: /^continuar/i })).toBeVisible();
