@@ -105,6 +105,8 @@ test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', a
     expect(payload).toMatchObject({
       name: 'QA Playwright',
       email: 'qa.playwright@example.test',
+      province: 'Mendoza',
+      city: 'Godoy Cruz',
       product: 'auto',
       website: '',
     });
@@ -126,6 +128,7 @@ test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', a
   await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
   await page.getByLabel('Email *').fill('qa.playwright@example.test');
   await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByLabel('Localidad o departamento').fill('Godoy Cruz');
   await page.getByRole('button', { name: /^continuar/i }).click();
 
   // Paso 2 — detalle del riesgo + privacidad
