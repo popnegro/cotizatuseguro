@@ -236,7 +236,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
     validProducts
   );
   for (const { properties } of capturedPayloads) {
-    assert.equal(properties.city, "Mendoza", "empty city should fall back to province");
+    assert.equal(properties.city, "Godoy Cruz", "locality should be sent to HubSpot");
     assert.equal(properties.lead_source, "direct");
     for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"]) {
       assert.equal(Object.hasOwn(properties, key), false, `unexpected blank attribution property: ${key}`);
