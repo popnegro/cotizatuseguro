@@ -494,7 +494,9 @@ export default function Home() {
         <div className="footer-column"><strong>Navegación</strong><a href="#seguros">Coberturas</a><a href="#aseguradoras">Respaldo asegurador</a><a href="#como-funciona">Cómo funciona</a><a href="#faq">Preguntas frecuentes</a><a href="/privacidad">Política de privacidad</a></div>
       </div><div className="container footer-bottom"><span>© {new Date().getFullYear()} Agustín Montes · Mendoza, Argentina</span><a href="/privacidad">Términos y privacidad</a></div></footer>
 
-      <a className="floating-cta" href="#cotizar" onClick={() => track("cta_click", { cta_location: "floating_cta" })}><span aria-hidden="true">↓</span> Ir a cotizar</a>
+      {!(consent === "unknown" && showConsent) && (
+        <a className="floating-cta" href="#cotizar" onClick={() => track("cta_click", { cta_location: "floating_cta" })}><span aria-hidden="true">↓</span> Ir a cotizar</a>
+      )}
 
       {consent === "unknown" && showConsent && (
         <aside className="consent-banner" aria-label="Preferencias de privacidad">

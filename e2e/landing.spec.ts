@@ -35,6 +35,32 @@ test('rechazar consentimiento mantiene bloqueadas las etiquetas de medición', a
   expect(await page.evaluate(() => localStorage.getItem('analytics-consent'))).toBe('rejected');
 });
 
+test('el banner de consentimiento reserva espacio sin solapar el CTA flotante', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForConsentBanner(page);
+  await expect(page.locator('.floating-cta')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Rechazar' }).click();
+  await expect(page.locator('.consent-banner')).toHaveCount(0);
+  await expect(page.locator('.floating-cta')).toBeVisible();
+});
+
+test('el H1 móvil mantiene un tamaño legible y acotado en pantallas estrechas', async ({ page }) => {
+  for (const width of [320, 360, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/');
+    const heading = page.locator('.hero h1');
+    await expect(heading).toBeVisible();
+    const typography = await heading.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { fontSize: Number.parseFloat(style.fontSize), lineHeight: Number.parseFloat(style.lineHeight) };
+    });
+    expect(typography.fontSize).toBeLessThanOrEqual(38.4);
+    expect(typography.lineHeight / typography.fontSize).toBeGreaterThanOrEqual(1.07);
+    expect(typography.lineHeight / typography.fontSize).toBeLessThanOrEqual(1.12);
+  }
+});
+
 test('aceptar consentimiento carga GTM una sola vez si hay ID configurado', async ({ page }) => {
   await page.goto('/');
   await waitForConsentBanner(page);
