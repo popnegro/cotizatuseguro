@@ -73,3 +73,30 @@ for (const productCase of productCases) {
     expect(leadApiCalls).toBe(0);
   });
 }
+
+
+for (const productCase of productCases) {
+  test(`el formulario de ${productCase.label} no desborda en móvil (320 y 390 px)`, async ({ page }) => {
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/");
+      await page.locator("#cotizar").scrollIntoViewIfNeeded();
+      await page.getByLabel("Tipo de seguro *").selectOption(productCase.product);
+      await page.getByLabel("Nombre y apellido *").fill("QA Producto");
+      await page.getByLabel("WhatsApp *").fill("+54 261 555 0101");
+      await page.getByLabel("Email *").fill("qa.product@example.test");
+      await page.getByLabel("Provincia *").selectOption("Mendoza");
+      await page.getByRole("button", { name: /^continuar/i }).click();
+
+      const dimensions = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        document: document.documentElement.scrollWidth,
+      }));
+      expect(
+        dimensions.document,
+        `${productCase.product} at ${width}px: document width ${dimensions.document} exceeds viewport ${dimensions.viewport}`,
+      ).toBeLessThanOrEqual(dimensions.viewport);
+      await expect(page.locator(`#${productCase.requiredFields[0]}`)).toBeVisible();
+    }
+  });
+}
