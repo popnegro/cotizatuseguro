@@ -168,8 +168,11 @@ export default function Home() {
     if (!form.province.trim()) {
       errors.province = "Seleccioná tu provincia.";
     }
+    if (!form.city.trim()) {
+      errors.city = "Ingresá tu localidad o departamento.";
+    }
     setFieldErrors(errors);
-    const firstInvalid = ["name", "phone", "email", "province"].find((key) => errors[key]);
+    const firstInvalid = ["name", "phone", "email", "province", "city"].find((key) => errors[key]);
     if (firstInvalid) {
       window.setTimeout(() => document.getElementById(firstInvalid)?.focus(), 0);
     }
@@ -422,9 +425,10 @@ export default function Home() {
                   {fieldErrors.province && <span className="field-error" id="err-province">{fieldErrors.province}</span>}
                 </div>
                 <div className="field">
-                  <label htmlFor="city">Localidad o departamento</label>
-                  <input id="city" name="city" autoComplete="address-level2" maxLength={100} placeholder="Ej. Godoy Cruz" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} aria-describedby="city-hint" />
-                  <span className="field-hint" id="city-hint">Opcional · ayuda a ubicar el riesgo.</span>
+                  <label htmlFor="city">Localidad o departamento *</label>
+                  <input id="city" name="city" autoComplete="address-level2" maxLength={100} placeholder="Ej. Godoy Cruz" value={form.city} onChange={(e) => { setForm({ ...form, city: e.target.value }); setFieldErrors((prev) => { const n = { ...prev }; delete n.city; return n; }); }} aria-invalid={!!fieldErrors.city} aria-describedby={fieldErrors.city ? "err-city" : "city-hint"} />
+                  <span className="field-hint" id="city-hint">Indicá tu localidad o departamento.</span>
+                  {fieldErrors.city && <span className="field-error" id="err-city">{fieldErrors.city}</span>
                 </div>
               </div>
               )}
