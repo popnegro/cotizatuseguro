@@ -28,6 +28,8 @@ test("privacy page canonical, Open Graph URL, and body use the canonical origin"
   assert.ok(privacy.includes('url: "https://cotizatuseguro.com.ar/privacidad"'));
   assert.ok(privacy.includes("https://cotizatuseguro.com.ar/"));
   assert.doesNotMatch(privacy, /https:\/\/www\.cotizatuseguro\.com\.ar/);
+  assert.match(privacy, /images: \[\{ url: "\/opengraph-image", width: 1200, height: 630/);
+  assert.match(privacy, /card: "summary_large_image"/);
 });
 
 
