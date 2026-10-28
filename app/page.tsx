@@ -171,7 +171,7 @@ export default function Home() {
     setFieldErrors(errors);
     const firstInvalid = ["name", "phone", "email", "province"].find((key) => errors[key]);
     if (firstInvalid) {
-      window.requestAnimationFrame(() => document.getElementById(firstInvalid)?.focus());
+      window.setTimeout(() => document.getElementById(firstInvalid)?.focus(), 0);
     }
     return Object.keys(errors).length === 0;
   }
@@ -197,7 +197,7 @@ export default function Home() {
     if (!form.privacyAccepted) {
       setFieldErrors((prev) => ({ ...prev, privacy: "Confirmá la política de privacidad." }));
       setError("Leé la información de privacidad y confirmá para continuar.");
-      window.requestAnimationFrame(() => document.getElementById("privacyAccepted")?.focus());
+      window.setTimeout(() => document.getElementById("privacyAccepted")?.focus(), 0);
       return;
     }
     setFieldErrors({});
