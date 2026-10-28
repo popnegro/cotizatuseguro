@@ -21,8 +21,8 @@ const products = [
   { id: "moto", title: "Motos" },
   { id: "hogar", title: "Hogar" },
   { id: "consorcio", title: "Consorcio" },
-  { id: "bici", title: "Bicicletas" },
-  { id: "alquiler", title: "Caución de alquiler" },
+  { id: "bicicletas", title: "Bicicleta" },
+  { id: "caucion_alquiler", title: "Caución alquiler" },
 ] as const;
 
 const sections = [
