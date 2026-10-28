@@ -208,55 +208,35 @@ h2{color:#102a43}
 .quote-trust p{margin:0 0 6px;font-size:.86rem;color:#d8e5db;line-height:1.5}
 .quote-trust strong{color:#fff}
 .quote-trust-note{opacity:.85;font-size:.8rem!important}
-.form-stepper{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0 8px}
-.step-pill{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:.78rem;font-weight:800;background:#eaf4fb;color:#617487}
-.step-pill.is-active{background:#1769aa;color:#fff}
-.step-pill.is-done{background:#e5f5ed;color:#12805c}
+.form-stepper{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 22px}
+.step-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:#f7fafc;color:var(--muted);font-size:.8rem;font-weight:800}
+.step-pill.is-active{background:#eaf4fb;border-color:#8db9de;color:#0d4777}
+.step-pill.is-done{background:#e5f5ed;border-color:#9fd4bb;color:#0d684c}
 .step-pill-sep{color:#bacbd8;font-weight:700}
-.field-hint{font-size:.78rem;color:var(--muted);line-height:1.4}
-.field-error{font-size:.78rem;color:#922f24;font-weight:700;line-height:1.35}
-.field.has-error input,.field.has-error select{border-color:#e8a99a;box-shadow:0 0 0 3px #f4d0c940}
-.form-step-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#f5f9fc;border:1px solid var(--line);border-radius:12px}
-.form-step-summary p{margin:0;font-size:.88rem;color:var(--ink)}
-.link-button{border:0;background:none;color:#1769aa;font-weight:800;cursor:pointer;padding:0;font-size:.86rem}
-.link-button:hover{text-decoration:underline}
+.field.has-error input,.field.has-error select{border-color:#d66;box-shadow:0 0 0 3px #d66112}
+.field-error{margin:0;font-size:.78rem;color:#b42318;font-weight:700}
+.button-secondary{background:#fff;color:var(--navy);border:1px solid var(--line);box-shadow:none}
+.button-secondary:hover{background:#f5f9fd;border-color:#8db9de;color:#0d4777;box-shadow:none;transform:none}
 
-/* P2 — typography, spacing, denser product UI */
+/* P2 — denser type, spacing, skip-link, mobile product grid */
 .skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:100}
-.skip-link:focus{left:16px;top:16px;width:auto;height:auto;padding:12px 16px;background:var(--navy);color:#fff;border-radius:10px;font-weight:800;text-decoration:none;outline:3px solid #b0d84d;outline-offset:2px}
-body{font-size:16px;letter-spacing:-.005em}
-.lead{font-size:1.08rem;line-height:1.65;max-width:34em}
+.skip-link:focus{position:fixed;left:16px;top:16px;width:auto;height:auto;padding:12px 16px;background:#102a43;color:#fff;border-radius:10px;font-weight:800;text-decoration:none}
 .section{padding:72px 0}
 .section-intro{margin-bottom:28px}
-.section-intro p{font-size:1rem;line-height:1.65;max-width:36em}
-.hero{padding:64px 0 56px}
-.hero-grid{gap:40px}
-.hero-card{padding:16px;border-radius:20px}
-.hero-card-top{padding:18px 18px 16px;margin-bottom:12px;border-radius:14px}
-.hero-card-top strong{font-size:1.05rem}
-.hero-card-top p{font-size:.86rem;margin-top:4px}
-.product-grid{gap:8px}
-.product-link{padding:14px 12px;border-radius:12px}
-.product-link .product-icon{font-size:1.25rem;margin-bottom:6px}
-.product-link strong{font-size:.92rem}
-.product-link span:last-child{font-size:.74rem;line-height:1.35;margin-top:2px}
-.coverage-card{min-height:0;padding:20px;border-radius:16px}
-.coverage-card h3{font-size:1.15rem}
-.coverage-card p{font-size:.88rem;margin-bottom:16px}
-.assurance-card{padding:18px 16px}
+.section-intro p{font-size:.98rem}
+.coverage-card{min-height:240px;padding:22px}
+.coverage-card h3{font-size:1.2rem}
+.coverage-card p{font-size:.88rem;margin-bottom:18px}
+.assurance-card{padding:20px 16px}
 .assurance-card p{font-size:.82rem}
-.company-strip{margin-bottom:22px;gap:8px}
-.company-chip{min-height:40px;padding:8px 14px;font-size:.84rem}
-.quote-card{padding:28px;border-radius:18px}
-.quote-aside{padding:28px;border-radius:18px}
+.quote-card{padding:28px}
+.quote-aside{padding:28px}
 .form-grid{gap:14px}
 .field label{font-size:.84rem}
-.field input,.field select{min-height:48px;padding:12px 13px;border-radius:10px}
-.form-stepper{margin:10px 0 6px}
-.step-pill{font-size:.74rem;padding:5px 11px}
-.steps{gap:14px;margin-top:24px}
-.step{padding:22px;border-radius:16px}
-.step p{font-size:.9rem;color:var(--muted);margin:0;line-height:1.55}
+.field input,.field select{padding:12px 13px;min-height:46px}
+.help{font-size:.78rem}
+.step{padding:22px}
+.step-number{width:36px;height:36px;margin-bottom:14px;font-size:.9rem;color:var(--muted);margin:0;line-height:1.55}
 .faq summary{padding:16px 48px 16px 18px;font-size:.95rem}
 .faq p{font-size:.88rem;padding:0 18px 16px}
 .footer-layout{padding:40px 0 28px;gap:32px}
@@ -278,4 +258,26 @@ body{font-size:16px;letter-spacing:-.005em}
   .quote-card,.quote-aside{padding:18px}
   .form-stepper{gap:6px}
   .step-pill-sep{display:none}
+}
+
+/* Legal / privacidad — same shell as landing */
+.legal-shell .header-cta{display:inline-flex!important}
+.legal-shell .menu-toggle{display:none!important}
+.legal-hero{padding:48px 0 28px;background:radial-gradient(ellipse at 80% 15%,#e6f1fb 0,transparent 38%),linear-gradient(120deg,#f5f9fd 0%,#fff 65%);border-bottom:1px solid #e7eef4}
+.legal-hero-inner{max-width:760px}
+.legal-hero h1{margin:12px 0 14px;font-size:clamp(2.1rem,4.2vw,3.2rem);line-height:1.08}
+.legal-meta{margin:0 0 14px;color:var(--muted);font-size:.9rem}
+.legal-article{max-width:760px;line-height:1.75}
+.legal-article>p{margin:0 0 14px;color:var(--ink)}
+.legal-section{margin-top:28px;padding-top:8px}
+.legal-section h2{font-size:1.2rem;margin:0 0 12px;letter-spacing:-.02em}
+.legal-section p{margin:0 0 10px;color:var(--ink)}
+.legal-section ul{margin:0 0 12px;padding-left:1.2em;color:var(--ink)}
+.legal-section li{margin-bottom:6px}
+.legal-back{margin-top:36px;padding-top:20px;border-top:1px solid var(--line);font-weight:700}
+.legal-back a{color:var(--blue);text-decoration:none}
+.legal-back a:hover{text-decoration:underline}
+@media(max-width:560px){
+  .legal-hero{padding:36px 0 22px}
+  .legal-section{margin-top:22px}
 }
