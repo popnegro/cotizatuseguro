@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
 
+async function waitForConsentBanner(page: import('@playwright/test').Page) {
+  await expect(page.getByLabel('Preferencias de privacidad')).toBeVisible({ timeout: 5000 });
+}
+
 test('landing muestra los seis productos del PMV y el formulario', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /tu tranquilidad empieza con la cobertura adecuada/i })).toBeVisible();
@@ -7,9 +11,12 @@ test('landing muestra los seis productos del PMV y el formulario', async ({ page
   await expect(page.locator('#seguros .coverage-grid button.coverage-action')).toHaveCount(6);
   await expect(page.locator('#product option')).toHaveCount(6);
   await expect(page.locator('#aseguradoras .assurance-card')).toHaveCount(4);
+  await expect(page.locator('#aseguradoras .company-chip')).toHaveCount(7);
   await expect(page.locator('#faq details.faq')).toHaveCount(6);
   await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
+  // Paso 1 del formulario: Continuar (el envío final está en el paso 2)
+  await expect(page.getByRole('button', { name: /^continuar/i })).toBeVisible();
+  await expect(page.locator('.form-stepper')).toBeVisible();
 });
 
 test('rechazar consentimiento mantiene bloqueadas las etiquetas de medición', async ({ page }) => {
@@ -20,6 +27,7 @@ test('rechazar consentimiento mantiene bloqueadas las etiquetas de medición', a
     }
   });
   await page.goto('/');
+  await waitForConsentBanner(page);
   await page.getByRole('button', { name: 'Rechazar' }).click();
   await expect(page.getByLabel('Preferencias de privacidad')).toHaveCount(0);
   await page.waitForTimeout(500);
@@ -29,7 +37,8 @@ test('rechazar consentimiento mantiene bloqueadas las etiquetas de medición', a
 
 test('aceptar consentimiento carga GTM una sola vez si hay ID configurado', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Aceptar medición' }).click();
+  await waitForConsentBanner(page);
+  await page.getByRole('button', { name: 'Aceptar' }).click();
   await expect(page.getByLabel('Preferencias de privacidad')).toHaveCount(0);
   const loaderCount = await page.locator('#gtm-loader').count();
   // The local test server intentionally has no GTM ID; acceptance must not fabricate one.
@@ -45,7 +54,9 @@ test('el formulario invalido no intenta enviar leads ni llamar a HubSpot', async
   });
   await page.goto('/');
   await page.locator('#cotizar').scrollIntoViewIfNeeded();
-  await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+  // Paso 1 vacío: Continuar valida en cliente y no llama a la API
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByRole('alert').first()).toBeVisible();
   expect(leadApiCalls).toBe(0);
 });
 
@@ -76,15 +87,23 @@ test('solicitud valida usa la API simulada y construye el enlace de WhatsApp', a
   });
 
   await page.goto('/');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+
+  // Paso 1 — contacto
   await page.getByLabel('Nombre y apellido *').fill('QA Playwright');
   await page.getByLabel('WhatsApp *').fill('+54 261 555 0101');
   await page.getByLabel('Email *').fill('qa.playwright@example.test');
-  await page.getByLabel('Provincia *').fill('Mendoza');
+  await page.getByLabel('Provincia *').selectOption('Mendoza');
+  await page.getByRole('button', { name: /^continuar/i }).click();
+
+  // Paso 2 — detalle del riesgo + privacidad
+  await expect(page.getByRole('button', { name: /registrar y continuar por whatsapp/i })).toBeVisible();
   await page.getByLabel('Marca *').fill('Toyota');
   await page.getByLabel('Modelo *').fill('Etios');
   await page.getByLabel('Año *').fill('2022');
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: /registrar y continuar por whatsapp/i }).click();
+
   await expect.poll(() => leadRequests).toBe(1);
   await expect(page).toHaveURL(/https:\/\/wa\.me\/5492610000000\?text=/);
   expect(new URL(page.url()).searchParams.get('text')).toContain('SOL-QA123456');
