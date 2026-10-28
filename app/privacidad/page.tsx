@@ -13,6 +13,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_AR",
     url: "https://cotizatuseguro.com.ar/privacidad",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Cotizá tu seguro con Agustín Montes" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Política de Privacidad | CotizaTuSeguro",
+    description: "Información sobre el tratamiento de datos personales en CotizaTuSeguro.",
+    images: ["/opengraph-image"],
   },
 };
 
