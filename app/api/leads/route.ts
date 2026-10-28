@@ -23,7 +23,7 @@ const schema = z.object({
   email: z.string().trim().email().max(254),
   phone: z.string().trim().min(8).max(30),
   province: z.string().trim().min(2).max(100),
-  city: z.string().trim().max(100).optional().default(""),
+  city: z.string().trim().min(2, "Ingresá tu localidad o departamento").max(100),
   product: z.enum(["auto", "moto", "hogar", "consorcio", "bicicletas", "caucion_alquiler"]),
   details: z.record(z.string(), z.string().trim().max(200)).optional().default({}),
   attribution: attributionSchema
