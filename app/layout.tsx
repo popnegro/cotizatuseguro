@@ -40,6 +40,9 @@ export const metadata: Metadata = {
   description: "Solicitá asesoramiento para cotizar seguros de auto, moto, hogar, consorcio, bicicleta o caución de alquiler. La propuesta depende de la evaluación de cada riesgo.",
   metadataBase: new URL(productionSiteUrl),
   alternates: { canonical: "/" },
+  verification: {
+    google: "5BdbufppvxzR5z65ZB1XuPNX0X3I7CQwrAXvWwSsFdk"
+  },
   openGraph: {
     title: "Cotizá tu seguro | Agustín Montes",
     description: "Consultá por seguros de auto, moto, hogar, consorcio, bicicleta y caución de alquiler. Solicitá una cotización personalizada.",
