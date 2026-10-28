@@ -261,8 +261,8 @@ h2{color:#102a43}
 }
 
 /* Legal / privacidad — same shell as landing */
-.legal-shell .header-cta{display:inline-flex!important}
-.legal-shell .menu-toggle{display:none!important}
+@media(max-width:900px){.legal-shell .header-cta{display:inline-flex!important}}
+@media(max-width:560px){.legal-shell .header-inner{gap:8px}.legal-shell .brand{min-width:0;gap:7px;font-size:.76rem}.legal-shell .brand small{display:none}.legal-shell .header-cta{display:inline-flex!important;flex-shrink:0;padding:8px 9px;font-size:.68rem;gap:4px;white-space:nowrap}}
 .legal-hero{padding:48px 0 28px;background:radial-gradient(ellipse at 80% 15%,#e6f1fb 0,transparent 38%),linear-gradient(120deg,#f5f9fd 0%,#fff 65%);border-bottom:1px solid #e7eef4}
 .legal-hero-inner{max-width:760px}
 .legal-hero h1{margin:12px 0 14px;font-size:clamp(2.1rem,4.2vw,3.2rem);line-height:1.08}
