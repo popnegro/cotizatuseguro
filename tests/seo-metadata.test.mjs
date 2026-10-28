@@ -29,3 +29,14 @@ test("privacy page canonical, Open Graph URL, and body use the canonical origin"
   assert.ok(privacy.includes("https://cotizatuseguro.com.ar/"));
   assert.doesNotMatch(privacy, /https:\/\/www\.cotizatuseguro\.com\.ar/);
 });
+
+
+test("homepage declares an Open Graph and Twitter large social preview image", async () => {
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const image = await readFile(new URL("../app/opengraph-image.tsx", import.meta.url), "utf8");
+  assert.match(layout, /images: \[\{ url: "\/opengraph-image", width: 1200, height: 630/);
+  assert.match(layout, /card: "summary_large_image"/);
+  assert.match(layout, /images: \["\/opengraph-image"\]/);
+  assert.match(image, /export const size = \{ width: 1200, height: 630 \}/);
+  assert.match(image, /Cotizá tu seguro/);
+});
