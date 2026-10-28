@@ -134,7 +134,8 @@ test("la solicitud conserva atribución UTM y gclid al registrar el lead", async
   await page.getByRole("button", { name: /registrar y continuar por whatsapp/i }).click();
 
   await expect.poll(() => capturedPayload).not.toBeNull();
-  expect((capturedPayload as { attribution: Record<string, string> }).attribution).toMatchObject({
+  const payload = capturedPayload as unknown as { attribution: Record<string, string> };
+  expect(payload.attribution).toMatchObject({
     utm_source: "qa-source",
     utm_medium: "qa-medium",
     utm_campaign: "pmv-regression",
