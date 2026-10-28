@@ -168,7 +168,10 @@ export default function Home() {
     if (!form.province.trim()) {
       errors.province = "Seleccioná tu provincia.";
     }
-    if (form.city.trim().length < 2) {
+    const city = form.city.trim();
+    if (!city) {
+      errors.city = "Ingresá tu localidad o departamento.";
+    } else if (city.length < 2) {
       errors.city = "Ingresá una localidad o departamento válido (mínimo 2 caracteres).";
     }
     setFieldErrors(errors);
