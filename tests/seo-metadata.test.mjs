@@ -29,3 +29,20 @@ test("privacy page canonical, Open Graph URL, and body use the canonical origin"
   assert.ok(privacy.includes("https://cotizatuseguro.com.ar/"));
   assert.doesNotMatch(privacy, /https:\/\/www\.cotizatuseguro\.com\.ar/);
 });
+
+test("homepage declares Open Graph and Twitter large social preview metadata", async () => {
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const image = await readFile(new URL("../app/opengraph-image.tsx", import.meta.url), "utf8");
+  assert.ok(layout.includes('url: "/opengraph-image", width: 1200, height: 630'));
+  assert.ok(layout.includes('card: "summary_large_image"'));
+  assert.ok(layout.includes('images: ["/opengraph-image"]'));
+  assert.ok(image.includes('export const size = { width: 1200, height: 630 }'));
+  assert.ok(image.includes("Cotizá tu seguro"));
+});
+
+test("privacy page exposes a navigable table of contents with stable section anchors", async () => {
+  const privacy = await readFile(new URL("../app/privacidad/page.tsx", import.meta.url), "utf8");
+  assert.ok(privacy.includes('aria-label="Índice de la política de privacidad"'));
+  assert.ok(privacy.includes('id={`seccion-${index + 1}`}'));
+  assert.ok(privacy.includes('href={`#seccion-${index + 1}`}'));
+});

@@ -14,7 +14,14 @@ export const metadata: Metadata = {
     description: "Seguros para autos, motos, hogar, consorcio, bicicletas y caución de alquiler. Solicitá una cotización.",
     type: "website",
     locale: "es_AR",
-    url: productionSiteUrl
+    url: productionSiteUrl,
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Cotizá tu seguro con Agustín Montes" }]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Cotizá tu seguro | Agustín Montes",
+    description: "Seguros para autos, motos, hogar, consorcio, bicicletas y caución de alquiler en Mendoza.",
+    images: ["/opengraph-image"]
   },
   robots: isProductionDeployment ? { index: true, follow: true } : { index: false, follow: false }
 };

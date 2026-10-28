@@ -161,3 +161,31 @@ test('el formulario mueve el foco a los errores y anuncia el cambio de paso', as
   await expect(page.locator('#privacyAccepted')).toBeFocused();
   await expect(page.getByRole('alert').first()).toContainText(/privacidad/i);
 });
+
+
+test('la política de privacidad ofrece índice navegable y anclas estables', async ({ page }) => {
+  await page.goto('/privacidad');
+  const toc = page.getByRole('navigation', { name: 'Índice de la política de privacidad' });
+  await expect(toc).toBeVisible();
+  await expect(toc.getByRole('link')).toHaveCount(13);
+  await toc.getByRole('link', { name: 'Responsable del tratamiento' }).click();
+  await expect(page).toHaveURL(/#seccion-1$/);
+  await expect(page.locator('#seccion-1 h2')).toContainText('Responsable del tratamiento');
+});
+
+test('la cabecera de privacidad conserva el CTA sin desbordar en móvil', async ({ page }) => {
+  for (const width of [320, 390, 560, 768, 900]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/privacidad');
+    const header = page.locator('header.site-header');
+    const cta = header.getByRole('link', { name: /solicitar cotización/i });
+    await expect(cta).toBeVisible();
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+      ctaRight: document.querySelector('header .header-cta')?.getBoundingClientRect().right ?? 0,
+    }));
+    expect(dimensions.document, `privacy at ${width}px overflows to ${dimensions.document}px`).toBeLessThanOrEqual(dimensions.viewport);
+    expect(dimensions.ctaRight, `privacy header CTA exceeds ${width}px viewport`).toBeLessThanOrEqual(width);
+  }
+});
