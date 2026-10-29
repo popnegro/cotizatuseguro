@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const productionSiteUrl = "https://cotizatuseguro.com.ar";
+const socialImagePath = "/opengraph-image";
+const socialImageAlt = "Cotizá tu seguro con Agustín Montes";
+
 const isProductionDeployment = process.env.VERCEL_ENV === "production";
 
 const structuredData = {
@@ -50,13 +53,19 @@ export const metadata: Metadata = {
     siteName: "CotizaTuSeguro",
     locale: "es_AR",
     url: productionSiteUrl,
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Cotizá tu seguro con Agustín Montes" }]
+    images: [{
+      url: socialImagePath,
+      type: "image/png",
+      width: 1200,
+      height: 630,
+      alt: socialImageAlt
+    }]
   },
   twitter: {
     card: "summary_large_image",
     title: "Cotizá tu seguro | Agustín Montes",
     description: "Solicitá una cotización personalizada para distintos tipos de seguros.",
-    images: ["/opengraph-image"]
+    images: [{ url: socialImagePath, alt: socialImageAlt }]
   },
   robots: isProductionDeployment ? { index: true, follow: true } : { index: false, follow: false }
 };
@@ -67,6 +76,6 @@ export const viewport: Viewport = {
   themeColor: "#102a43"
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode> }) {
   return <html lang="es-AR"><body><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />{children}</body></html>;
 }
