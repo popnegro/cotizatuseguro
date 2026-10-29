@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const productionSiteUrl = "https://cotizatuseguro.com.ar";
+const socialImagePath = "/opengraph-image";
+const socialImageAlt = "Cotizá tu seguro con Agustín Montes";
+
 const isProductionDeployment = process.env.VERCEL_ENV === "production";
 
 const structuredData = {
@@ -47,15 +50,22 @@ export const metadata: Metadata = {
     title: "Cotizá tu seguro | Agustín Montes",
     description: "Consultá por seguros de auto, moto, hogar, consorcio, bicicleta y caución de alquiler. Solicitá una cotización personalizada.",
     type: "website",
+    siteName: "CotizaTuSeguro",
     locale: "es_AR",
     url: productionSiteUrl,
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Cotizá tu seguro con Agustín Montes" }]
+    images: [{
+      url: socialImagePath,
+      type: "image/png",
+      width: 1200,
+      height: 630,
+      alt: socialImageAlt
+    }]
   },
   twitter: {
     card: "summary_large_image",
     title: "Cotizá tu seguro | Agustín Montes",
     description: "Solicitá una cotización personalizada para distintos tipos de seguros.",
-    images: ["/opengraph-image"]
+    images: [{ url: socialImagePath, alt: socialImageAlt }]
   },
   robots: isProductionDeployment ? { index: true, follow: true } : { index: false, follow: false }
 };
