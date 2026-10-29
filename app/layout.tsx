@@ -76,6 +76,6 @@ export const viewport: Viewport = {
   themeColor: "#102a43"
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode> }) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="es-AR"><body><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />{children}</body></html>;
 }
