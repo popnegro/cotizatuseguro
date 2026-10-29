@@ -47,6 +47,7 @@ export const metadata: Metadata = {
     title: "Cotizá tu seguro | Agustín Montes",
     description: "Consultá por seguros de auto, moto, hogar, consorcio, bicicleta y caución de alquiler. Solicitá una cotización personalizada.",
     type: "website",
+    siteName: "CotizaTuSeguro",
     locale: "es_AR",
     url: productionSiteUrl,
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Cotizá tu seguro con Agustín Montes" }]
