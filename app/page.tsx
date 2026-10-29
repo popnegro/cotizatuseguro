@@ -135,6 +135,9 @@ export default function Home() {
     return () => window.clearTimeout(id);
   }, [consent]);
 
+  useEffect(() => {
+    if (consent !== "accepted") return;
+
     // Meta Pixel: load only after explicit measurement consent.
     const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
     if (metaPixelId && !document.getElementById("meta-pixel-loader")) {
