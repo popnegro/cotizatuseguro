@@ -36,9 +36,10 @@ test("privacy page canonical, Open Graph URL, and body use the canonical origin"
 test("homepage declares Open Graph and Twitter large social preview metadata", async () => {
   const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const image = await readFile(new URL("../app/opengraph-image.tsx", import.meta.url), "utf8");
-  assert.ok(layout.includes('url: "/opengraph-image", width: 1200, height: 630'));
-  assert.ok(layout.includes('card: "summary_large_image"'));
-  assert.ok(layout.includes('images: ["/opengraph-image"]'));
+  assert.match(layout, /const socialImagePath = "\/opengraph-image"/);
+  assert.match(layout, /type: "image\/png",\s+width: 1200,\s+height: 630,\s+alt: socialImageAlt/);
+  assert.match(layout, /card: "summary_large_image"/);
+  assert.match(layout, /images: \[\{ url: socialImagePath, alt: socialImageAlt \}\]/);
   assert.ok(image.includes("export const size = { width: 1200, height: 630 }"));
   assert.ok(image.includes("Cotizá tu seguro"));
 });
@@ -52,7 +53,7 @@ test("homepage includes factual structured data for the site, page, and named pr
   assert.ok(layout.includes('"@type": "WebPage"'));
   assert.ok(layout.includes('name: "Agustín Montes"'));
   assert.ok(layout.includes('jobTitle: "Productor Asesor de Seguros"'));
-  assert.ok(layout.includes('JSON.stringify(structuredData)'));
+  assert.ok(layout.includes("JSON.stringify(structuredData)"));
   assert.doesNotMatch(layout, /sameAs:|telephone:|streetAddress:|aggregateRating:/);
 });
 
