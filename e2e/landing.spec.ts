@@ -1,9 +1,13 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 declare global {
   interface Window {
     __metaCalls?: unknown[][];
   }
+}
+
+async function waitForConsentBanner(page: Page) {
+  await expect(page.getByLabel('Preferencias de privacidad')).toBeVisible({ timeout: 5000 });
 }
 
 test('landing muestra los seis productos del PMV y el formulario', async ({ page }) => {
