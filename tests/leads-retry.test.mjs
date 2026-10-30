@@ -59,7 +59,10 @@ test("reports sent, pending, and permanent failures separately", async (t) => {
     new Response("rate limited", { status: 429 }),
     new Response("invalid property", { status: 400 })
   ];
-  const fetchMock = mock.method(globalThis, "fetch", async () => responses.shift());
+  const fetchMock = mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).endsWith("/contacts/search")) return new Response(JSON.stringify({ results: [] }), { status: 200 });
+    return responses.shift();
+  });
   t.after(() => fetchMock.mock.restore());
 
   const request = new NextRequest("https://preview.example.test/api/leads/retry", {
@@ -86,7 +89,8 @@ test("prevents concurrent initial and scheduled delivery of the same lead", asyn
   let signalFetchStarted;
   const fetchStarted = new Promise((resolve) => { signalFetchStarted = resolve; });
   let resolveFetch;
-  const fetchMock = mock.method(globalThis, "fetch", async () => {
+  const fetchMock = mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).endsWith("/contacts/search")) return new Response(JSON.stringify({ results: [] }), { status: 200 });
     signalFetchStarted();
     return await new Promise((resolve) => { resolveFetch = resolve; });
   });
