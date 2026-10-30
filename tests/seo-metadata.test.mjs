@@ -35,13 +35,14 @@ test("privacy page canonical, Open Graph URL, and body use the canonical origin"
 
 test("homepage declares the uploaded JPEG as Open Graph and Twitter large social preview", async () => {
   const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
-  assert.match(layout, /const socialImagePath = "\/opengraph-image\.jpeg"/);
+  assert.match(layout, /const socialImagePath = "https:\/\/cotizatuseguro\.com\.ar\/opengraph-image\.jpeg"/);
   assert.match(layout, /type: "image\/jpeg",\s+width: 1200,\s+height: 630,\s+alt: socialImageAlt/);
   assert.match(layout, /card: "summary_large_image"/);
   assert.match(layout, /images: \[\{ url: socialImagePath, alt: socialImageAlt \}\]/);
+  await assert.rejects(readFile(new URL("../app/opengraph-image.tsx", import.meta.url)), { code: "ENOENT" });
   const image = await readFile(new URL("../public/opengraph-image.jpeg", import.meta.url));
   assert.ok(image.byteLength > 10000, "Open Graph JPEG must be present and non-empty");
-  assert.doesNotMatch(layout, /socialImagePath = "\/opengraph-image"/);
+  assert.doesNotMatch(layout, /socialImagePath = "\/opengraph-image/);
 });
 
 test("homepage includes factual structured data for the site, page, and named professional", async () => {
