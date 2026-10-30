@@ -106,13 +106,22 @@ export async function deliverStoredLead(requestId: string): Promise<StoredLead |
     const lead = await getLead(requestId);
     if (!lead || lead.status !== "pending" || lead.nextAttemptAt > Date.now()) return lead;
 
-    const result = await deliverLead(lead);
+    // Persist the attempt BEFORE any outbound CRM request. If the process crashes
+    // after HubSpot creates the contact but before Redis records success, the next
+    // worker sees attempts > 0 and reconciles insurance_request_id before another POST.
+    const deliveryAttempt: StoredLead = {
+      ...lead,
+      attempts: lead.attempts + 1,
+      updatedAt: Date.now()
+    };
+    await updateLead(deliveryAttempt);
+
+    const result = await deliverLead(deliveryAttempt);
     const now = Date.now();
     if (result.status === "sent") {
       const updated: StoredLead = {
-        ...lead,
+        ...deliveryAttempt,
         status: "sent",
-        attempts: lead.attempts + 1,
         nextAttemptAt: 0,
         updatedAt: now,
         contactId: result.contactId
@@ -137,12 +146,10 @@ export async function deliverStoredLead(requestId: string): Promise<StoredLead |
       return updated;
     }
 
-    const attempts = lead.attempts + 1;
     const updated: StoredLead = {
-      ...lead,
+      ...deliveryAttempt,
       status: result.status === "failed" ? "failed" : "pending",
-      attempts,
-      nextAttemptAt: result.status === "failed" ? 0 : now + Math.min(60_000, 1_000 * 2 ** Math.max(0, attempts - 1)),
+      nextAttemptAt: result.status === "failed" ? 0 : now + Math.min(60_000, 1_000 * 2 ** Math.max(0, deliveryAttempt.attempts - 1)),
       updatedAt: now,
       lastErrorCode: result.errorCode
     };
