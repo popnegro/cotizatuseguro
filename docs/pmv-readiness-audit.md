@@ -83,3 +83,20 @@ The branch and release baseline have advanced since this audit was first written
 - No Google Ads Conversion ID/label is documented in `.env.example`; verify any GTM-managed conversion in the actual container rather than assuming it exists.
 
 **Decision remains NOT READY for launch or paid campaigns.** Complete the CRM, scheduler, consent/event, Google Ads, WhatsApp and authenticated Preview gates recorded in `docs/PMV-CLOSURE-RUNBOOK.md`. Keep `main` unchanged until the complete PMV acceptance criteria pass and the project owner approves the final integration PR.
+
+
+## Re-audit — 2026-10-30 (candidate after PR #42)
+
+- Candidate: `qa/pmv-candidate-2026-10` at `76b3929166e6c0fd3ffe2fa477c32f07cbf43d38`; PR #42 is merged into QA only.
+- CI #42 passed dependency installation, TypeScript, unit tests, ESLint, production build and Playwright Chromium acceptance. Candidate Vercel deployment `dpl_BwcYT7gbAbmYUpDV5sgfTMgvKEDw` is READY.
+- `main` remains unchanged at `2eab45af404bf75a68cc6c54129cc4ca956d2212`.
+- P1 durable delivery/idempotency implementation: the lead is persisted before CRM delivery; attempt count is persisted before HubSpot calls; subsequent attempts reconcile by `insurance_request_id`; reconciliation failure does not issue a duplicate create request. CI regression tests cover the lost-response case.
+- Distributed rate limiting: Upstash database `cotizatuseguro-rate-limit` is active; code uses a sliding window of 8 requests per 60 seconds and fails closed when Redis is unavailable. Vercel Firewall configuration is unavailable/not found; no Firewall mitigation is claimed.
+- Public production content currently exposes the six approved products and the privacy link. The form's stepper semantics and six-product validation are covered by existing Playwright tests.
+- HubSpot property/search evidence exists for the authorized synthetic QA contact, but the Vercel runtime token's portal parity and a Vercel-originated write have not been proven.
+- The scheduled retry workflow is production-facing. GitHub repository variable/secret state could not be independently verified through the available connector. Do not manually dispatch Production retry.
+- Consent code blocks analytics before opt-in and loads GTM/Meta Pixel only after acceptance. Actual GTM container rules, GA4/Meta test events and browser/server deduplication are unverified.
+- WhatsApp handoff code creates a prefilled `wa.me` URL only after durable API acceptance; no message is sent by the application. Preview desktop/mobile handoff is blocked by SSO access.
+- Google Ads conversion configuration is not established from repository or Vercel environment evidence.
+
+**Decision: NOT READY for PMV launch, paid campaigns or merge to main.** Remaining evidence gates are listed in `docs/PMV-CLOSURE-RUNBOOK.md`. The only outstanding human actions are access/authorization for the protected Preview and external analytics/CRM account verification, plus final approval of the PR to main. No Production data, customer communications, campaigns or main branch were changed in this audit.
