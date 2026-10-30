@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const productionSiteUrl = "https://cotizatuseguro.com.ar";
-const socialImagePath = "/opengraph-image";
-const socialImageAlt = "Cotizá tu seguro con Agustín Montes";
+const socialImagePath = "/opengraph-image.jpg";
+const socialImageAlt = "El asesoramiento profesional marca la diferencia — Agustín Montes";
 
 const isProductionDeployment = process.env.VERCEL_ENV === "production";
 
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     url: productionSiteUrl,
     images: [{
       url: socialImagePath,
-      type: "image/png",
+      type: "image/jpeg",
       width: 1200,
       height: 630,
       alt: socialImageAlt
