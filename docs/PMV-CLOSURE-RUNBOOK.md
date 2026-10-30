@@ -143,3 +143,16 @@ The QA candidate is technically green for the changes integrated so far, but the
 - Repository branch inventory reports `protected: false` for `main` and the candidate; repository rulesets query returns an empty list. The GitHub integration cannot read the branch-protection detail endpoint (HTTP 403), and no branch-protection write capability is available. Therefore branch protection is **not evidenced and must be treated as absent**.
 - Before final PMV approval, configure protection for `main`: require pull requests, require the CI checks (typecheck, tests, lint, build, Playwright), require at least one approval, dismiss stale approvals, require conversation resolution, block force pushes and deletion, and restrict bypass/admin exceptions as appropriate. Keep the candidate branch writable for QA integration.
 - This is an account/repository administration gate. Do not claim that `main` is protected until the settings are independently verified.
+
+
+## Re-audit — 2026-10-30, bounded retry worker and governance
+
+- The GitHub repository ruleset `Protect main - CotizaTuSeguro` is now verified ACTIVE for `refs/heads/main`. It requires one approval, dismisses stale approvals, requires approval of the latest push, requires conversation resolution, blocks force-push and deletion, and has no bypass actors.
+- The ruleset requires the GitHub Actions status check `validate`. The current QA candidate commit's status evidence is Vercel deployment success; the check requirement is configured but its enforcement has not yet been exercised by a PR targeting `main`. Keep `main` unchanged.
+- A further P1 was found in the scheduled retry endpoint: it previously processed up to 25 leads sequentially, while HubSpot and Meta each have 5-second request timeouts. This could exceed the scheduler's 60-second curl timeout.
+- Remediation on branch `fix/retry-worker-bounded-batch`: cap each invocation at 4 leads, explicitly set the Next.js route `maxDuration` to 60 seconds, and extend the Redis per-lead claim lease from 15 to 30 seconds. Add a regression assertion that the route requests only the bounded batch size.
+- The scheduler remains gated by `LEAD_RETRY_ENABLED` and `LEAD_RETRY_SECRET`. Do not dispatch it against Production for testing; it may deliver real pending leads.
+- CI and a READY Preview deployment are required before this remediation can be considered validated. The external integration, scheduler-secret parity, analytics, WhatsApp and authenticated visual gates remain open as listed above.
+
+### Governance status correction
+The earlier note stating that the ruleset was absent is superseded by this verification. The ruleset is now active and includes required conversation resolution and the `validate` status check. Do not treat status-check enforcement as end-to-end verified until a PR targeting `main` demonstrates the required check behavior.
