@@ -1,6 +1,7 @@
 import test, { afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
-import { deliverLead } from "../app/api/leads/delivery.ts";
+import { deliverLead, deliverStoredLead } from "../app/api/leads/delivery.ts";
+import { __setLeadStoreForTests } from "../app/api/leads/lead-store.ts";
 
 const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
 
@@ -96,4 +97,37 @@ test("fails closed when a retried lead has no stable HubSpot request ID", async 
     retryable: true
   });
   assert.equal(fetchMock.mock.callCount(), 0);
+});
+
+
+test("persists the first delivery attempt before contacting HubSpot and reconciles after a lost response", async () => {
+  process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
+  const initial = lead({ attempts: 0 });
+  const stored = structuredClone(initial);
+  let attemptPersistedBeforeSearch = false;
+  __setLeadStoreForTests({
+    getLead: async () => structuredClone(stored),
+    updateLead: async (next) => {
+      Object.assign(stored, structuredClone(next));
+      if (next.attempts === 1 && next.status === "pending") attemptPersistedBeforeSearch = true;
+    },
+    claimLead: async () => true,
+    releaseLeadClaim: async () => {}
+  });
+  const fetchMock = mock.method(globalThis, "fetch", async (url) => {
+    assert.equal(url, "https://api.hubapi.com/crm/v3/objects/contacts/search");
+    assert.equal(attemptPersistedBeforeSearch, true, "attempt must be durable before any outbound CRM request");
+    return new Response(JSON.stringify({ results: [{ id: "contact-after-lost-response" }] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  });
+
+  const result = await deliverStoredLead(initial.requestId);
+  assert.equal(result.status, "sent");
+  assert.equal(result.contactId, "contact-after-lost-response");
+  assert.equal(stored.attempts, 1);
+  assert.equal(stored.status, "sent");
+  assert.equal(fetchMock.mock.callCount(), 1, "existing contact must be reconciled without a duplicate create");
+  __setLeadStoreForTests(undefined);
 });
