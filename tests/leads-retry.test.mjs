@@ -100,12 +100,12 @@ test("prevents concurrent initial and scheduled delivery of the same lead", asyn
   await fetchStarted;
   const competingDelivery = await deliverStoredLead(lead.requestId);
 
-  assert.equal(fetchMock.mock.callCount(), 1, "only the worker holding the claim may call HubSpot");
+  assert.equal(fetchMock.mock.callCount(), 2, "only the worker holding the claim may reconcile and call HubSpot");
   assert.equal(competingDelivery.status, "pending", "the competing worker observes the current durable state");
 
   resolveFetch(new Response(JSON.stringify({ id: "contact-concurrent" }), { status: 201 }));
   const delivered = await firstDelivery;
   assert.equal(delivered.status, "sent");
   assert.equal(storedLeads.get(lead.requestId).status, "sent");
-  assert.equal(fetchMock.mock.callCount(), 1);
+  assert.equal(fetchMock.mock.callCount(), 2);
 });
