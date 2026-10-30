@@ -65,3 +65,20 @@ PR #7 is the active draft. Vercel checks must be re-run against the current head
 - **Form completion rate:** successful submissions / form starts.
 
 Campaign spend stays disabled until the P0 integration gates and measurement acceptance gates are evidenced. Domain metadata code changes alone do not confirm DNS/Vercel ownership, TLS or redirect behavior.
+
+
+## Update — 2026-10-30
+
+The branch and release baseline have advanced since this audit was first written.
+
+- `main` currently remains at `2eab45af404bf75a68cc6c54129cc4ca956d2212`.
+- The current QA candidate is `qa/pmv-candidate-2026-10` at `c0d3fb8a55ddc5a649958a94dacb29810b4cf8a3`; PR #39 merged the semantic form-stepper improvement into QA only.
+- CI #200 passed typecheck, 31 unit tests, lint, build and 25 Playwright browser tests. The Vercel QA deployment reached READY, but its Preview alias is protected by SSO and could not be inspected by an unauthenticated browser.
+- Production smoke checks returned HTTP 200 for the landing page, `/api/health` and the canonical Open Graph JPEG. The live HTML uses the exact requested JPEG for both Open Graph and Twitter. Responsive widths from 320 through 1440 px showed no horizontal overflow.
+- `/api/health` reports integration configuration flags, not successful CRM writes or analytics delivery. Vercel environment entries exist for the listed integrations, but their values were not exposed or tested.
+- The API still safely falls back to Upstash rate limiting unless `LEADS_INFRA_RATE_LIMIT_VERIFIED=true`; the Vercel environment inventory did not contain that verification flag.
+- The retry scheduler is defined in `.github/workflows/lead-retry.yml`, but this audit did not verify the GitHub repository variable/secret or production retry history. Do not trigger it against Production as a test.
+- The connected HubSpot app context is not onboarded, so portal-property and test-contact verification remain unavailable through that connector.
+- No Google Ads Conversion ID/label is documented in `.env.example`; verify any GTM-managed conversion in the actual container rather than assuming it exists.
+
+**Decision remains NOT READY for launch or paid campaigns.** Complete the CRM, scheduler, consent/event, Google Ads, WhatsApp and authenticated Preview gates recorded in `docs/PMV-CLOSURE-RUNBOOK.md`. Keep `main` unchanged until the complete PMV acceptance criteria pass and the project owner approves the final integration PR.
