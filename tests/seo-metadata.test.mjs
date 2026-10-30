@@ -39,7 +39,7 @@ test("homepage declares the uploaded JPEG as Open Graph and Twitter large social
   assert.match(layout, /type: "image\/jpeg",\s+width: 1200,\s+height: 630,\s+alt: socialImageAlt/);
   assert.match(layout, /card: "summary_large_image"/);
   assert.match(layout, /images: \[\{ url: socialImagePath, alt: socialImageAlt \}\]/);
-  const image = await readFile(new URL("../opengraph-image.jpeg", import.meta.url));
+  const image = await readFile(new URL("../public/opengraph-image.jpeg", import.meta.url));
   assert.ok(image.byteLength > 10000, "Open Graph JPEG must be present and non-empty");
   assert.doesNotMatch(layout, /socialImagePath = "\/opengraph-image"/);
 });
