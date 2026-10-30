@@ -124,7 +124,7 @@ test("creates a lead using HubSpot properties without calling the live CRM", asy
   assert.equal(payload.ok, true);
   assert.equal(payload.contactId, "test-contact-id");
   assert.match(payload.requestId, /^SOL-[A-F0-9]{8}$/);
-  assert.equal(fetchMock.mock.callCount(), 1);
+  assert.equal(fetchMock.mock.callCount(), 2, "reconciliation search must precede contact creation");
   assert.equal(captured.properties.email, "qa.integration@example.test");
   assert.equal(captured.properties.firstname, "QA");
   assert.equal(captured.properties.lastname, "Integration");
@@ -232,7 +232,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
     assert.equal(response.status, 400, `unsupported product accepted: ${product}`);
   }
 
-  assert.equal(fetchMock.mock.callCount(), validProducts.length);
+  assert.equal(fetchMock.mock.callCount(), validProducts.length * 2, "each lead must reconcile before contact creation");
   assert.deepEqual(
     capturedPayloads.map(({ properties }) => properties.insurance_product),
     validProducts
@@ -323,7 +323,7 @@ test("keeps transient HubSpot failures queued and marks permanent rejections for
     assert.equal([...storedLeads.values()][index].status, scenario.storedStatus);
     assert.equal(storedLeads.size, index + 1);
     assert.doesNotMatch(JSON.stringify(body), /sensitive upstream details/);
-    assert.equal(fetchMock.mock.callCount(), 1);
+    assert.equal(fetchMock.mock.callCount(), 2, "each failed create must be preceded by reconciliation");
     fetchMock.mock.restore();
   }
 });
@@ -395,7 +395,7 @@ test("enforces the shared per-IP limit under concurrent submissions and blocks e
   const blocked = responses.filter((response) => response.status === 429);
   assert.equal(blocked.length, 4);
   assert.ok(Number(blocked[0].headers.get("Retry-After")) >= 1);
-  assert.equal(fetchMock.mock.callCount(), 8);
+  assert.equal(fetchMock.mock.callCount(), 16, "eight accepted leads each perform reconciliation and creation");
 });
 
 test("fails closed when Redis rate limiting fails and never contacts HubSpot", async (t) => {
