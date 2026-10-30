@@ -1,6 +1,6 @@
 # CotizaTuSeguro PMV closure runbook
 
-Updated: 2026-10-26
+Updated: 2026-10-30
 
 This runbook records the remaining operational checks required before the PMV can be declared production-ready. Do not submit real customer data as a test.
 
@@ -89,7 +89,8 @@ Before rollback, confirm the prior deployment is healthy and its environment var
 - `LEADS_RATE_LIMIT_MODE=infrastructure` is present in Vercel, but the API requires the additional `LEADS_INFRA_RATE_LIMIT_VERIFIED=true` flag before bypassing Upstash. That verification flag was not present in the environment inventory; therefore the application-level Upstash limiter remains the active path. Do not infer that Vercel Firewall rate limiting is active.
 - Vercel environment entries exist for HubSpot, Upstash, WhatsApp, GTM, GA4, Meta Pixel and Meta CAPI. Values were not decrypted or exposed. Their presence does not prove valid credentials or end-to-end connectivity.
 - `.github/workflows/lead-retry.yml` schedules a POST to the production retry endpoint every five minutes, gated by the GitHub repository variable `LEAD_RETRY_ENABLED == 'true'` and the repository secret `LEAD_RETRY_SECRET`. This audit did not verify the GitHub variable/secret values or scheduler run history. Do not dispatch the workflow as a test: it can deliver pending leads to the production CRM.
-- The connected HubSpot app context has not completed onboarding, so it cannot currently verify the target portal's custom properties or a test contact. The Vercel health flag alone is insufficient.
+- HubSpot connector identity was verified as account `52182698`, matching the portal containing the authorized synthetic QA contact. The contact property `insurance_request_id` is present and searchable: an exact CRM search for `SOL-QA-VERIFY-20261030` returned exactly one result, contact `259253423268` (`qa-cotizatuseguro-20261030@example.com`). The connected HubSpot app still reports onboarding incomplete; this does not invalidate the successful read/search, but its setup remains incomplete.
+- Vercel environment inventory confirms `HUBSPOT_ACCESS_TOKEN` entries exist for both Preview and Production. Secret values were not decrypted, so token-to-portal parity and successful Vercel-originated API writes remain unverified. Do not infer end-to-end delivery from variable presence or connector access.
 
 ### Remaining launch gates
 
