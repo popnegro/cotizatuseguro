@@ -78,7 +78,8 @@ The branch and release baseline have advanced since this audit was first written
 - `/api/health` reports integration configuration flags, not successful CRM writes or analytics delivery. Vercel environment entries exist for the listed integrations, but their values were not exposed or tested.
 - The API still safely falls back to Upstash rate limiting unless `LEADS_INFRA_RATE_LIMIT_VERIFIED=true`; the Vercel environment inventory did not contain that verification flag.
 - The retry scheduler is defined in `.github/workflows/lead-retry.yml`, but this audit did not verify the GitHub repository variable/secret or production retry history. Do not trigger it against Production as a test.
-- The connected HubSpot app context is not onboarded, so portal-property and test-contact verification remain unavailable through that connector.
+- HubSpot connector identity was verified as account `52182698`, matching the portal containing the authorized synthetic QA contact. The custom property `insurance_request_id` is searchable: exact query `SOL-QA-VERIFY-20261030` returned one result, contact `259253423268` (`qa-cotizatuseguro-20261030@example.com`). The HubSpot app still reports onboarding incomplete, but read/search access is operational.
+- Vercel has `HUBSPOT_ACCESS_TOKEN` entries scoped to both Preview and Production. Values were not decrypted; token-to-portal parity and an API write originating from Vercel remain unverified.
 - No Google Ads Conversion ID/label is documented in `.env.example`; verify any GTM-managed conversion in the actual container rather than assuming it exists.
 
 **Decision remains NOT READY for launch or paid campaigns.** Complete the CRM, scheduler, consent/event, Google Ads, WhatsApp and authenticated Preview gates recorded in `docs/PMV-CLOSURE-RUNBOOK.md`. Keep `main` unchanged until the complete PMV acceptance criteria pass and the project owner approves the final integration PR.
