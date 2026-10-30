@@ -69,3 +69,38 @@ After merge, verify the Production deployment ID and commit, then run only non-m
 Previous deployment observed: dpl_4sGE6gUTzVM13qq8YZxsAQRxuxWX (commit 4fce461).
 
 Before rollback, confirm the prior deployment is healthy and its environment variables remain compatible. Rollback does not reverse environment changes or recover missing leads. Preserve the Redis pending queue and review failed leads separately.
+
+
+## Current verification — 2026-10-30
+
+### Candidate and deployment
+
+- `main` remains unchanged at `2eab45af404bf75a68cc6c54129cc4ca956d2212`.
+- QA candidate: `qa/pmv-candidate-2026-10`, merge commit `c0d3fb8a55ddc5a649958a94dacb29810b4cf8a3`.
+- PR #39 (semantic quote-form stepper) merged into the QA candidate only.
+- GitHub Actions CI #200 passed: typecheck, 31 unit tests, lint, build and 25 Chromium browser tests.
+- Vercel QA deployment for the QA candidate reached READY. Its Preview alias redirects to Vercel SSO; external browser QA cannot inspect it without an authorized session.
+- Production smoke checks: landing page HTTP 200; `/api/health` HTTP 200; canonical is the apex domain; Open Graph and Twitter both reference only `https://cotizatuseguro.com.ar/opengraph-image.jpeg`; the image responds HTTP 200 with `image/jpeg` (275,705 bytes).
+- Responsive production check: no horizontal overflow at 320, 360, 390, 430, 768, 1024 or 1440 px. No browser page errors observed.
+- Production health reports HubSpot, WhatsApp, GTM, Meta Pixel and Meta CAPI as configured. This reports environment-variable presence only; it is not an integration transaction or event-delivery test.
+
+### Current technical controls
+
+- `LEADS_RATE_LIMIT_MODE=infrastructure` is present in Vercel, but the API requires the additional `LEADS_INFRA_RATE_LIMIT_VERIFIED=true` flag before bypassing Upstash. That verification flag was not present in the environment inventory; therefore the application-level Upstash limiter remains the active path. Do not infer that Vercel Firewall rate limiting is active.
+- Vercel environment entries exist for HubSpot, Upstash, WhatsApp, GTM, GA4, Meta Pixel and Meta CAPI. Values were not decrypted or exposed. Their presence does not prove valid credentials or end-to-end connectivity.
+- `.github/workflows/lead-retry.yml` schedules a POST to the production retry endpoint every five minutes, gated by the GitHub repository variable `LEAD_RETRY_ENABLED == 'true'` and the repository secret `LEAD_RETRY_SECRET`. This audit did not verify the GitHub variable/secret values or scheduler run history. Do not dispatch the workflow as a test: it can deliver pending leads to the production CRM.
+- The connected HubSpot app context has not completed onboarding, so it cannot currently verify the target portal's custom properties or a test contact. The Vercel health flag alone is insufficient.
+
+### Remaining launch gates
+
+1. **HubSpot:** verify that the Vercel token belongs to the intended portal, required custom properties exist and are searchable, and a clearly synthetic lead is created and found in an explicitly authorized Preview/test portal. Do not submit real customer data.
+2. **Retry scheduler:** verify GitHub variable/secret configuration without printing values; confirm the secret matches Vercel's secret. Exercise the scheduler against Preview before enabling or relying on Production retries.
+3. **GA4 / GTM / Meta:** inspect the published GTM container and verify consent rejection blocks all measurement tags; acceptance emits the intended events once; confirm GA4 DebugView and Meta Test Events. The owner's prior confirmation is not independently revalidated by this audit.
+4. **Google Ads:** no Conversion ID/label is documented in the repository environment template. Verify whether the intended conversion is configured inside the GTM container; do not assume `generate_lead` is a valid Google Ads conversion action.
+5. **WhatsApp:** verify the prefilled handoff on desktop and mobile in the protected Preview. A click or URL opening is not proof that a message was sent.
+6. **Privacy:** retain the approved project policy content; record any independent legal review separately. This technical audit is not legal advice.
+7. **Preview visual QA:** use an authorized Vercel session to inspect the latest QA deployment. The SSO redirect is a real access blocker for external browser inspection.
+
+### Release decision
+
+The QA candidate is technically green for the changes integrated so far, but the PMV is **not launch-ready** until the CRM, retry operations, measurement, WhatsApp and protected-Preview gates above have evidence. Keep paid campaigns disabled. Do not merge or promote the QA candidate to `main` until the complete acceptance checklist passes and the project owner explicitly approves the final PR.
