@@ -137,3 +137,9 @@ The QA candidate is technically green for the changes integrated so far, but the
 
 ### Release decision
 **NOT READY for final PMV acceptance or paid campaigns.** Code-level P0/P1 fixes and CI are green, but external integration, measurement, scheduler and authenticated visual gates above remain unverified. Keep campaigns disabled. Keep `main` unchanged until every applicable acceptance gate is evidenced and the owner approves the final PR.
+
+
+### Additional P0 — GitHub governance
+- Repository branch inventory reports `protected: false` for `main` and the candidate; repository rulesets query returns an empty list. The GitHub integration cannot read the branch-protection detail endpoint (HTTP 403), and no branch-protection write capability is available. Therefore branch protection is **not evidenced and must be treated as absent**.
+- Before final PMV approval, configure protection for `main`: require pull requests, require the CI checks (typecheck, tests, lint, build, Playwright), require at least one approval, dismiss stale approvals, require conversation resolution, block force pushes and deletion, and restrict bypass/admin exceptions as appropriate. Keep the candidate branch writable for QA integration.
+- This is an account/repository administration gate. Do not claim that `main` is protected until the settings are independently verified.
