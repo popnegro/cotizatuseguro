@@ -436,11 +436,23 @@ export default function Home() {
           <div className="quote-card">
             <span className="eyebrow">Formulario de cotización</span>
             <h2 id="quote-form-title" tabIndex={-1}>¿Qué necesitás asegurar?</h2>
-            <div className="form-stepper" aria-label="Progreso del formulario">
-              <span className={formStep === 1 ? "step-pill is-active" : "step-pill is-done"}>1. Contacto</span>
-              <span className="step-pill-sep" aria-hidden="true">→</span>
-              <span className={formStep === 2 ? "step-pill is-active" : "step-pill"}>2. Detalle del riesgo</span>
-            </div>
+            <ol className="form-stepper" aria-label="Progreso del formulario">
+              <li>
+                <span
+                  className={formStep === 1 ? "step-pill is-active" : "step-pill is-done"}
+                  aria-current={formStep === 1 ? "step" : undefined}
+                  aria-label={formStep === 2 ? "1. Contacto, completado" : undefined}
+                >
+                  1. Contacto
+                </span>
+              </li>
+              <li className="step-pill-sep" aria-hidden="true">→</li>
+              <li>
+                <span className={formStep === 2 ? "step-pill is-active" : "step-pill"} aria-current={formStep === 2 ? "step" : undefined}>
+                  2. Detalle del riesgo
+                </span>
+              </li>
+            </ol>
             <p className="help">{formStep === 1 ? "Paso 1 de 2 · Datos de contacto y tipo de seguro. En el siguiente paso completás los detalles del bien a asegurar." : "Paso 2 de 2 · Detalles del riesgo, privacidad y registro. Después podrás continuar por WhatsApp; el mensaje no se envía automáticamente."}</p>
             {error && <div className="form-error" role="alert">{error}</div>}
             {success && <div className="form-success" role="status">{success}</div>}
