@@ -5,6 +5,10 @@ import { deliverStoredLead } from "../delivery.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+// Keep the sequential batch comfortably below the scheduler's 60-second HTTP timeout.
+const RETRY_BATCH_SIZE = 4;
 
 function authorized(request: NextRequest): boolean {
   const expected = process.env.LEAD_RETRY_SECRET;
@@ -21,7 +25,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const leads = await getDuePendingLeads(25);
+    const leads = await getDuePendingLeads(RETRY_BATCH_SIZE);
     let sent = 0;
     let pending = 0;
     let failed = 0;
