@@ -211,6 +211,11 @@ test('el formulario mueve el foco a los errores y anuncia el cambio de paso', as
   await page.goto('/');
   await page.locator('#cotizar').scrollIntoViewIfNeeded();
 
+  const progress = page.getByRole('list', { name: 'Progreso del formulario' });
+  await expect(progress).toBeVisible();
+  await expect(progress.locator('[aria-current="step"]')).toHaveText('1. Contacto');
+  await expect(progress.getByRole('listitem')).toHaveCount(2);
+
   await page.getByRole('button', { name: /^continuar/i }).click();
   await expect(page.locator('#name')).toBeFocused();
   await expect(page.getByRole('alert').first()).toBeVisible();
@@ -223,6 +228,8 @@ test('el formulario mueve el foco a los errores y anuncia el cambio de paso', as
   await page.getByRole('button', { name: /^continuar/i }).click();
 
   await expect(page.locator('#quote-form-title')).toBeFocused();
+  await expect(progress.locator('[aria-current="step"]')).toHaveText('2. Detalle del riesgo');
+  await expect(progress.getByRole('listitem')).toHaveCount(2);
   // Complete required risk fields so this assertion isolates privacy-consent validation.
   await page.getByLabel('Marca *').fill('Fiat');
   await page.getByLabel('Modelo *').fill('Cronos');
