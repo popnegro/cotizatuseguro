@@ -7,6 +7,7 @@ import { deliverStoredLead } from "../app/api/leads/delivery.ts";
 
 let storedLeads;
 let claimedLeads;
+let requestedBatchLimit;
 const previousSecret = process.env.LEAD_RETRY_SECRET;
 const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
 
@@ -30,7 +31,10 @@ beforeEach(() => {
   __setLeadStoreForTests({
     getLead: async (requestId) => storedLeads.get(requestId) ?? null,
     updateLead: async (lead) => storedLeads.set(lead.requestId, structuredClone(lead)),
-    getDuePendingLeads: async () => [...storedLeads.values()].filter((lead) => lead.status === "pending"),
+    getDuePendingLeads: async (limit) => {
+      requestedBatchLimit = limit;
+      return [...storedLeads.values()].filter((lead) => lead.status === "pending").slice(0, limit);
+    },
     claimLead: async (requestId) => {
       if (claimedLeads.has(requestId)) return false;
       claimedLeads.add(requestId);
@@ -71,6 +75,7 @@ test("reports sent, pending, and permanent failures separately", async (t) => {
   });
   const response = await POST(request);
   assert.equal(response.status, 200);
+  assert.equal(requestedBatchLimit, 4, "retry route must use the bounded batch size");
   assert.deepEqual(await response.json(), {
     ok: true,
     processed: 3,
