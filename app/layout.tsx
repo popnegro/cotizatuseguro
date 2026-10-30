@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const productionSiteUrl = "https://cotizatuseguro.com.ar";
-const socialImagePath = "/opengraph-image.jpg";
+const socialImagePath = "/opengraph-image.jpeg";
 const socialImageAlt = "El asesoramiento profesional marca la diferencia — Agustín Montes";
 
 const isProductionDeployment = process.env.VERCEL_ENV === "production";
