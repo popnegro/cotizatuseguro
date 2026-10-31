@@ -208,7 +208,7 @@ h2{color:#102a43}
 .quote-trust p{margin:0 0 6px;font-size:.86rem;color:#d8e5db;line-height:1.5}
 .quote-trust strong{color:#fff}
 .quote-trust-note{opacity:.85;font-size:.8rem!important}
-.form-stepper{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 22px}
+.form-stepper{display:flex;align-items:center;gap:10px;flex-wrap:wrap;list-style:none;padding:0;margin:0 0 22px}.form-stepper>li{list-style:none}
 .step-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:#f7fafc;color:var(--muted);font-size:.8rem;font-weight:800}
 .step-pill.is-active{background:#eaf4fb;border-color:#8db9de;color:#0d4777}
 .step-pill.is-done{background:#e5f5ed;border-color:#9fd4bb;color:#0d684c}

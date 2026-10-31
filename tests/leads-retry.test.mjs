@@ -7,6 +7,7 @@ import { deliverStoredLead } from "../app/api/leads/delivery.ts";
 
 let storedLeads;
 let claimedLeads;
+let requestedBatchLimit;
 const previousSecret = process.env.LEAD_RETRY_SECRET;
 const previousToken = process.env.HUBSPOT_ACCESS_TOKEN;
 
@@ -15,7 +16,7 @@ beforeEach(() => {
   process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
   storedLeads = new Map();
   claimedLeads = new Set();
-  for (const [index, status] of ["pending", "pending", "pending"].entries()) {
+  for (const [index, status] of ["pending", "pending", "pending", "pending"].entries()) {
     const requestId = `SOL-TEST000${index}`;
     storedLeads.set(requestId, {
       requestId,
@@ -30,7 +31,10 @@ beforeEach(() => {
   __setLeadStoreForTests({
     getLead: async (requestId) => storedLeads.get(requestId) ?? null,
     updateLead: async (lead) => storedLeads.set(lead.requestId, structuredClone(lead)),
-    getDuePendingLeads: async () => [...storedLeads.values()].filter((lead) => lead.status === "pending"),
+    getDuePendingLeads: async (limit) => {
+      requestedBatchLimit = limit;
+      return [...storedLeads.values()].filter((lead) => lead.status === "pending").slice(0, limit);
+    },
     claimLead: async (requestId) => {
       if (claimedLeads.has(requestId)) return false;
       claimedLeads.add(requestId);
@@ -59,7 +63,10 @@ test("reports sent, pending, and permanent failures separately", async (t) => {
     new Response("rate limited", { status: 429 }),
     new Response("invalid property", { status: 400 })
   ];
-  const fetchMock = mock.method(globalThis, "fetch", async () => responses.shift());
+  const fetchMock = mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).endsWith("/contacts/search")) return new Response(JSON.stringify({ results: [] }), { status: 200 });
+    return responses.shift();
+  });
   t.after(() => fetchMock.mock.restore());
 
   const request = new NextRequest("https://preview.example.test/api/leads/retry", {
@@ -68,6 +75,7 @@ test("reports sent, pending, and permanent failures separately", async (t) => {
   });
   const response = await POST(request);
   assert.equal(response.status, 200);
+  assert.equal(requestedBatchLimit, 3, "retry route must leave time for per-invocation overhead");
   assert.deepEqual(await response.json(), {
     ok: true,
     processed: 3,
@@ -78,6 +86,9 @@ test("reports sent, pending, and permanent failures separately", async (t) => {
   assert.equal(storedLeads.get("SOL-TEST0000").status, "sent");
   assert.equal(storedLeads.get("SOL-TEST0001").status, "pending");
   assert.equal(storedLeads.get("SOL-TEST0002").status, "failed");
+  assert.equal(storedLeads.get("SOL-TEST0003").status, "pending", "fourth due lead must remain queued for the next run");
+  assert.equal(fetchMock.mock.callCount(), 6, "three leads each perform one reconciliation and one create request");
+  assert.equal(storedLeads.get("SOL-TEST0003").attempts, 0, "fourth due lead must not start delivery");
 });
 
 
@@ -86,7 +97,8 @@ test("prevents concurrent initial and scheduled delivery of the same lead", asyn
   let signalFetchStarted;
   const fetchStarted = new Promise((resolve) => { signalFetchStarted = resolve; });
   let resolveFetch;
-  const fetchMock = mock.method(globalThis, "fetch", async () => {
+  const fetchMock = mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).endsWith("/contacts/search")) return new Response(JSON.stringify({ results: [] }), { status: 200 });
     signalFetchStarted();
     return await new Promise((resolve) => { resolveFetch = resolve; });
   });
@@ -96,12 +108,12 @@ test("prevents concurrent initial and scheduled delivery of the same lead", asyn
   await fetchStarted;
   const competingDelivery = await deliverStoredLead(lead.requestId);
 
-  assert.equal(fetchMock.mock.callCount(), 1, "only the worker holding the claim may call HubSpot");
+  assert.equal(fetchMock.mock.callCount(), 2, "only the worker holding the claim may reconcile and call HubSpot");
   assert.equal(competingDelivery.status, "pending", "the competing worker observes the current durable state");
 
   resolveFetch(new Response(JSON.stringify({ id: "contact-concurrent" }), { status: 201 }));
   const delivered = await firstDelivery;
   assert.equal(delivered.status, "sent");
   assert.equal(storedLeads.get(lead.requestId).status, "sent");
-  assert.equal(fetchMock.mock.callCount(), 1);
+  assert.equal(fetchMock.mock.callCount(), 2);
 });

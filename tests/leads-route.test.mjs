@@ -52,10 +52,10 @@ test("falls back to Upstash rate limiting when infrastructure mode is not explic
     return { success: true, reset: Date.now() + 60_000 };
   });
 
-  const fetchMock = mock.method(globalThis, "fetch", async () => new Response(
-    JSON.stringify({ id: "test-contact-id" }),
-    { status: 201, headers: { "Content-Type": "application/json" } }
-  ));
+  const fetchMock = mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).endsWith("/contacts/search")) return new Response(JSON.stringify({ results: [] }), { status: 200 });
+    return new Response(JSON.stringify({ id: "test-contact-id" }), { status: 201, headers: { "Content-Type": "application/json" } });
+  });
   t.after(() => fetchMock.mock.restore());
 
   const request = new NextRequest("https://preview.example.test/api/leads", {
@@ -87,6 +87,7 @@ test("creates a lead using HubSpot properties without calling the live CRM", asy
 
   let captured;
   const fetchMock = mock.method(globalThis, "fetch", async (url, init) => {
+    if (String(url).endsWith("/contacts/search")) return new Response(JSON.stringify({ results: [] }), { status: 200 });
     assert.equal(url, "https://api.hubapi.com/crm/v3/objects/contacts");
     assert.equal(init.method, "POST");
     assert.equal(init.headers.Authorization, "Bearer test-token-never-used");
@@ -123,7 +124,7 @@ test("creates a lead using HubSpot properties without calling the live CRM", asy
   assert.equal(payload.ok, true);
   assert.equal(payload.contactId, "test-contact-id");
   assert.match(payload.requestId, /^SOL-[A-F0-9]{8}$/);
-  assert.equal(fetchMock.mock.callCount(), 1);
+  assert.equal(fetchMock.mock.callCount(), 2, "reconciliation search must precede contact creation");
   assert.equal(captured.properties.email, "qa.integration@example.test");
   assert.equal(captured.properties.firstname, "QA");
   assert.equal(captured.properties.lastname, "Integration");
@@ -179,7 +180,8 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
     bicicletas: { make: "QA", model: "Test", year: "2024", wheelSize: "29", bikeMaterial: "aluminio", insuredAmount: "500000" },
     caucion_alquiler: { monthlyRent: "250000", contractDuration: "24" }
   };
-  const fetchMock = mock.method(globalThis, "fetch", async (_url, init) => {
+  const fetchMock = mock.method(globalThis, "fetch", async (url, init) => {
+    if (String(url).endsWith("/contacts/search")) return new Response(JSON.stringify({ results: [] }), { status: 200 });
     capturedPayloads.push(JSON.parse(init.body));
     return new Response(JSON.stringify({ id: "test-contact-id" }), {
       status: 201,
@@ -230,7 +232,7 @@ test("accepts only the six PMV products and omits blank attribution", async (t) 
     assert.equal(response.status, 400, `unsupported product accepted: ${product}`);
   }
 
-  assert.equal(fetchMock.mock.callCount(), validProducts.length);
+  assert.equal(fetchMock.mock.callCount(), validProducts.length * 2, "each lead must reconcile before contact creation");
   assert.deepEqual(
     capturedPayloads.map(({ properties }) => properties.insurance_product),
     validProducts
@@ -291,10 +293,10 @@ test("keeps transient HubSpot failures queued and marks permanent rejections for
   ];
 
   for (const [index, scenario] of cases.entries()) {
-    const fetchMock = mock.method(globalThis, "fetch", async () => new Response(
-      JSON.stringify({ message: "sensitive upstream details must not leak" }),
-      { status: scenario.upstreamStatus, headers: { "Content-Type": "application/json" } }
-    ));
+    const fetchMock = mock.method(globalThis, "fetch", async (url) => {
+      if (String(url).endsWith("/contacts/search")) return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      return new Response(JSON.stringify({ message: "sensitive upstream details must not leak" }), { status: scenario.upstreamStatus, headers: { "Content-Type": "application/json" } });
+    });
     t.after(() => fetchMock.mock.restore());
 
     const request = new NextRequest("https://preview.example.test/api/leads", {
@@ -321,7 +323,7 @@ test("keeps transient HubSpot failures queued and marks permanent rejections for
     assert.equal([...storedLeads.values()][index].status, scenario.storedStatus);
     assert.equal(storedLeads.size, index + 1);
     assert.doesNotMatch(JSON.stringify(body), /sensitive upstream details/);
-    assert.equal(fetchMock.mock.callCount(), 1);
+    assert.equal(fetchMock.mock.callCount(), 2, "each failed create must be preceded by reconciliation");
     fetchMock.mock.restore();
   }
 });
@@ -373,10 +375,10 @@ test("enforces the shared per-IP limit under concurrent submissions and blocks e
     accepted += 1;
     return { success: accepted <= 8, reset: Date.now() + 30_000 };
   });
-  const fetchMock = mock.method(globalThis, "fetch", async () => new Response(
-    JSON.stringify({ id: "test-contact-id" }),
-    { status: 201, headers: { "Content-Type": "application/json" } }
-  ));
+  const fetchMock = mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).endsWith("/contacts/search")) return new Response(JSON.stringify({ results: [] }), { status: 200 });
+    return new Response(JSON.stringify({ id: "test-contact-id" }), { status: 201, headers: { "Content-Type": "application/json" } });
+  });
   t.after(() => fetchMock.mock.restore());
 
   const requests = Array.from({ length: 12 }, (_, index) => new NextRequest("https://preview.example.test/api/leads", {
@@ -393,7 +395,7 @@ test("enforces the shared per-IP limit under concurrent submissions and blocks e
   const blocked = responses.filter((response) => response.status === 429);
   assert.equal(blocked.length, 4);
   assert.ok(Number(blocked[0].headers.get("Retry-After")) >= 1);
-  assert.equal(fetchMock.mock.callCount(), 8);
+  assert.equal(fetchMock.mock.callCount(), 16, "eight accepted leads each perform reconciliation and creation");
 });
 
 test("fails closed when Redis rate limiting fails and never contacts HubSpot", async (t) => {

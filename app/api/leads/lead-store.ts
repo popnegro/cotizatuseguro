@@ -5,7 +5,7 @@ const LEAD_TTL_SECONDS = 30 * 24 * 60 * 60;
 const LEAD_PREFIX = "cotizatuseguro:lead";
 const PENDING_KEY = "cotizatuseguro:leads:pending";
 const CLAIM_PREFIX = "cotizatuseguro:lead-claim";
-const CLAIM_TTL_MS = 15_000;
+const CLAIM_TTL_MS = 30_000;
 
 export type LeadStatus = "pending" | "sent" | "failed";
 
