@@ -109,3 +109,12 @@ The older governance note above is superseded: GitHub ruleset `Protect main - Co
 A separate retry-worker P1 was found and remediated in proposed PR #44: the worker now requests at most four leads per invocation, declares a 60-second route maximum duration, and uses a 30-second per-lead claim lease. Regression coverage asserts the bounded batch. PR #44 CI is the validation gate; Vercel Preview deployment was rate-limited by the account for 24 hours at the time of this audit. No Production retry workflow was run.
 
 External blockers remain: Vercel-originated HubSpot write/token parity, GitHub scheduler secret parity and Preview-only scheduler validation, GTM/GA4/Meta test events and deduplication, Google Ads conversion scope, authenticated desktop/mobile Preview QA, WhatsApp Business ownership/handoff, and independent privacy-policy legal review. PMV remains NOT READY; paid campaigns stay disabled; `main` stays unchanged.
+
+
+## Re-audit — 2026-10-31, PR #44 completed
+
+PR #44 was merged into `qa/pmv-candidate-2026-10` (squash commit `804bfa34b4d4fac3f39fff6b9e74577a7be10fb7`). CI run `41140493692` passed dependency installation, typecheck, unit tests, lint, build and Playwright browser acceptance on the PR head. The retry worker now limits each sequential batch to four leads, declares a 60-second route maximum, and extends the Redis claim lease to 30 seconds; the bounded batch is regression-tested.
+
+The latest Vercel deployment list does not yet show a deployment for the post-merge candidate commit. The prior READY deployment is for the earlier candidate head, so Preview deployment and authenticated visual QA for PR #44 remain unverified. `main` is unchanged at `2eab45af404bf75a68cc6c54129cc4ca956d2212`; the candidate remains ahead by six commits and behind by zero. No production scheduler was dispatched.
+
+**Release decision remains NOT READY.** Outstanding evidence gates: Vercel-originated HubSpot write and token-to-portal parity; GitHub scheduler variable/secret parity and Preview-only scheduler validation; GTM/GA4/Meta consent, event and deduplication verification; Google Ads conversion scope; authenticated desktop/mobile form and WhatsApp handoff QA; independent privacy review. Keep campaigns disabled and do not merge to `main` without final owner approval.
