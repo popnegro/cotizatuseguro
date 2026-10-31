@@ -42,6 +42,7 @@ export const metadata: Metadata = {
   title: "Cotizá tu seguro en Argentina | Agustín Montes",
   description: "Solicitá asesoramiento para cotizar seguros de auto, moto, hogar, consorcio, bicicleta o caución de alquiler. La propuesta depende de la evaluación de cada riesgo.",
   metadataBase: new URL(productionSiteUrl),
+  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
   alternates: { canonical: "/" },
   verification: {
     google: "5BdbufppvxzR5z65ZB1XuPNX0X3I7CQwrAXvWwSsFdk"
