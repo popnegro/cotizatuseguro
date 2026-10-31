@@ -67,6 +67,32 @@ test('aceptar consentimiento carga Meta Pixel y encola PageView', async ({ page 
   expect(await page.evaluate(() => localStorage.getItem('analytics-consent'))).toBe('accepted');
 });
 
+test('la cotización sigue operativa si el navegador bloquea Meta Pixel', async ({ page }) => {
+  const uncaughtErrors: string[] = [];
+  let pixelBlocked = false;
+  page.on('pageerror', (error) => uncaughtErrors.push(error.message));
+  page.on('requestfailed', (request) => {
+    if (request.url() === 'https://connect.facebook.net/en_US/fbevents.js') {
+      pixelBlocked = true;
+    }
+  });
+  await page.route('https://connect.facebook.net/en_US/fbevents.js', (route) => route.abort('blockedbyclient'));
+
+  await page.goto('/');
+  await waitForConsentBanner(page);
+  await page.getByRole('button', { name: 'Aceptar' }).click();
+  await expect(page.getByLabel('Preferencias de privacidad')).toHaveCount(0);
+  await expect.poll(() => pixelBlocked).toBe(true);
+
+  // A blocked analytics SDK must not prevent the user from navigating or validating the quote form.
+  await page.getByLabel('Tipo de seguro *').selectOption('hogar');
+  await page.locator('#cotizar').scrollIntoViewIfNeeded();
+  await page.getByRole('button', { name: /^continuar/i }).click();
+  await expect(page.getByRole('alert').first()).toBeVisible();
+  await expect(page.getByLabel('Tipo de seguro *')).toHaveValue('hogar');
+  expect(uncaughtErrors).toEqual([]);
+});
+
 test('el formulario invalido no intenta enviar leads ni llamar a HubSpot', async ({ page }) => {
   let leadApiCalls = 0;
   await page.route('**/api/leads', async (route) => {
