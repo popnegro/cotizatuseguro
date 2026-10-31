@@ -100,3 +100,12 @@ The branch and release baseline have advanced since this audit was first written
 - Google Ads conversion configuration is not established from repository or Vercel environment evidence.
 
 **Decision: NOT READY for PMV launch, paid campaigns or merge to main.** Remaining evidence gates are listed in `docs/PMV-CLOSURE-RUNBOOK.md`. The only outstanding human actions are access/authorization for the protected Preview and external analytics/CRM account verification, plus final approval of the PR to main. No Production data, customer communications, campaigns or main branch were changed in this audit.
+
+
+## Re-audit correction — 2026-10-30
+
+The older governance note above is superseded: GitHub ruleset `Protect main - CotizaTuSeguro` is now ACTIVE for `main`, with one required approval, stale-review dismissal, latest-push approval, conversation resolution, force-push/deletion restrictions, no bypass actors, and required status check `validate`. Enforcement against an actual PR targeting `main` has not yet been exercised; do not merge or promote without the owner's final approval.
+
+A separate retry-worker P1 was found and remediated in proposed PR #44: the worker now requests at most four leads per invocation, declares a 60-second route maximum duration, and uses a 30-second per-lead claim lease. Regression coverage asserts the bounded batch. PR #44 CI is the validation gate; Vercel Preview deployment was rate-limited by the account for 24 hours at the time of this audit. No Production retry workflow was run.
+
+External blockers remain: Vercel-originated HubSpot write/token parity, GitHub scheduler secret parity and Preview-only scheduler validation, GTM/GA4/Meta test events and deduplication, Google Ads conversion scope, authenticated desktop/mobile Preview QA, WhatsApp Business ownership/handoff, and independent privacy-policy legal review. PMV remains NOT READY; paid campaigns stay disabled; `main` stays unchanged.
