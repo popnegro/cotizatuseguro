@@ -156,3 +156,16 @@ The QA candidate is technically green for the changes integrated so far, but the
 
 ### Governance status correction
 The earlier note stating that the ruleset was absent is superseded by this verification. The ruleset is now active and includes required conversation resolution and the `validate` status check. Do not treat status-check enforcement as end-to-end verified until a PR targeting `main` demonstrates the required check behavior.
+
+
+## Re-audit — 2026-10-31, PR #44 completed
+
+- PR #44 (`fix(retry): bound scheduled lead delivery batches`) was merged into the QA candidate only, using squash merge. Merge commit: `804bfa34b4d4fac3f39fff6b9e74577a7be10fb7`.
+- CI run `41140493692` completed SUCCESS on candidate head `7cd1cece3dd6f259db3f53f608fae5ae65184278`: npm ci, typecheck, unit tests, lint, isolated Meta Pixel build, Playwright Chromium installation and browser acceptance all passed.
+- The retry worker is bounded to four sequential leads per invocation, has a declared 60-second route maximum, and extends the per-lead Redis claim lease to 30 seconds. A regression assertion verifies the batch size.
+- Candidate remains six commits ahead of `main` and zero behind; `main` remains `2eab45af404bf75a68cc6c54129cc4ca956d2212`. No PR targeting `main` was opened and no production deployment was promoted.
+- Vercel's latest listed QA deployment still corresponds to the prior candidate commit `f7a8a1fb7f209580a3f9890a0eef6ff2a341fe61`; a deployment for the post-PR #44 candidate commit was not visible in the deployment list. Therefore do not claim the new retry change has a READY Preview deployment or live visual validation yet. Recheck after the Vercel account deployment limit clears.
+- No production retry workflow was dispatched; no real leads or communications were generated.
+
+### Current status
+The code-level retry-worker P1 is merged into the QA candidate and automated CI is green. The PMV remains **NOT READY** because the Vercel-originated HubSpot write/token parity, scheduler secret parity and Preview-only scheduler validation, analytics/consent diagnostics, Google Ads conversion scope, authenticated desktop/mobile/WhatsApp QA, and independent privacy review remain open. Keep paid campaigns disabled and `main` unchanged pending all applicable evidence and explicit owner approval.
