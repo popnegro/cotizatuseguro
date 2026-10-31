@@ -16,7 +16,7 @@ beforeEach(() => {
   process.env.HUBSPOT_ACCESS_TOKEN = "test-token-never-used";
   storedLeads = new Map();
   claimedLeads = new Set();
-  for (const [index, status] of ["pending", "pending", "pending"].entries()) {
+  for (const [index, status] of ["pending", "pending", "pending", "pending"].entries()) {
     const requestId = `SOL-TEST000${index}`;
     storedLeads.set(requestId, {
       requestId,
@@ -75,7 +75,7 @@ test("reports sent, pending, and permanent failures separately", async (t) => {
   });
   const response = await POST(request);
   assert.equal(response.status, 200);
-  assert.equal(requestedBatchLimit, 4, "retry route must use the bounded batch size");
+  assert.equal(requestedBatchLimit, 3, "retry route must leave time for per-invocation overhead");
   assert.deepEqual(await response.json(), {
     ok: true,
     processed: 3,
@@ -86,6 +86,9 @@ test("reports sent, pending, and permanent failures separately", async (t) => {
   assert.equal(storedLeads.get("SOL-TEST0000").status, "sent");
   assert.equal(storedLeads.get("SOL-TEST0001").status, "pending");
   assert.equal(storedLeads.get("SOL-TEST0002").status, "failed");
+  assert.equal(storedLeads.get("SOL-TEST0003").status, "pending", "fourth due lead must remain queued for the next run");
+  assert.equal(fetchMock.mock.callCount(), 6, "three leads each perform one reconciliation and one create request");
+  assert.equal(storedLeads.get("SOL-TEST0003").attempts, 0, "fourth due lead must not start delivery");
 });
 
 
