@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // Keep the sequential batch comfortably below the scheduler's 60-second HTTP timeout.
-const RETRY_BATCH_SIZE = 4;
+const RETRY_BATCH_SIZE = 3;
 
 function authorized(request: NextRequest): boolean {
   const expected = process.env.LEAD_RETRY_SECRET;
