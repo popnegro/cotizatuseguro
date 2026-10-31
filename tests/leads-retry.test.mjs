@@ -87,7 +87,8 @@ test("reports sent, pending, and permanent failures separately", async (t) => {
   assert.equal(storedLeads.get("SOL-TEST0001").status, "pending");
   assert.equal(storedLeads.get("SOL-TEST0002").status, "failed");
   assert.equal(storedLeads.get("SOL-TEST0003").status, "pending", "fourth due lead must remain queued for the next run");
-  assert.equal(fetchMock.mock.callCount(), 3, "only the bounded batch may contact HubSpot");
+  assert.equal(fetchMock.mock.callCount(), 6, "three leads each perform one reconciliation and one create request");
+  assert.equal(storedLeads.get("SOL-TEST0003").attempts, 0, "fourth due lead must not start delivery");
 });
 
 
